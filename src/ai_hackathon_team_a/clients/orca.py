@@ -1,5 +1,6 @@
 """Small, security-conscious client for the OpenAI-compatible Orca Router API."""
 
+import logging
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -16,6 +17,7 @@ ReasoningEffort = Literal["off", "low", "medium", "high"]
 _CHARS_PER_TOKEN_ESTIMATE = 4
 
 
+_logger = logging.getLogger(__name__)
 _QWEN_MODEL_PREFIX = "qwen/"
 
 
@@ -145,6 +147,16 @@ class OrcaClient:
         try:
             response = self._client.chat.completions.create(**kwargs)
         except OpenAIError as exc:
+            # 原因を追えるよう、ゲートウェイが返したエラーの説明だけをログに残す
+            # （リクエストの本文・鍵は含めない。説明は300文字まで）。
+            _logger.warning(
+                "LLM request rejected: %s status=%s model=%s json_mode=%s detail=%s",
+                type(exc).__name__,
+                getattr(exc, "status_code", None),
+                model,
+                json_mode,
+                str(getattr(exc, "message", ""))[:300],
+            )
             raise OrcaClientError(f"Orca Router request failed ({type(exc).__name__}).") from None
 
         choices: Sequence[object] = getattr(response, "choices", ())
