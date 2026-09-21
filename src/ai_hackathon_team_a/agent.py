@@ -37,6 +37,10 @@ Partition = Literal["all", "managers"]
 
 _MAX_TOOL_ROUNDS_PER_EVENT = 5
 _MAX_QUESTIONS_PER_RUN = 2
+_LAST_ROUND_NOTE = (
+    "調査に使える回数は次で最後です。ここまでで理由が見つかっていなければ、"
+    "ask_member で担当者に理由を質問してください。見つかっていれば JSON で結論を返してください。"
+)
 _MAX_READ_SEGMENTS = 10
 _MAX_SEARCH_RESULTS = 10
 # AD-11：1人あたり、日本時間の1日に届く質問は最大3問まで（全プロジェクト合計）。
@@ -303,7 +307,13 @@ def _run_single_event_loop(
     for _round in range(_MAX_TOOL_ROUNDS_PER_EVENT):
         tools = list(_TOOLS)
         if recipient is not None and not asked_this_event:
-            tools.append(_ASK_MEMBER_TOOL)
+            if _round == _MAX_TOOL_ROUNDS_PER_EVENT - 1:
+                # 最後の1回は質問だけを渡す。本番で search_events の空振りを繰り返して
+                # 上限を使い切り、一度も質問しなかった（2026-09-22、C5 の確認）。
+                tools = [_ASK_MEMBER_TOOL]
+                messages.append({"role": "user", "content": _LAST_ROUND_NOTE})
+            else:
+                tools.append(_ASK_MEMBER_TOOL)
 
         result = llm_fn("AGENT", messages, json_mode=False, tools=tools)
         tool_calls = getattr(result, "tool_calls", None)
