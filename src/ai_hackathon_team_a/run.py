@@ -66,6 +66,10 @@ class RunOutcome:
     outcome: Outcome
     version_no: int | None = None
     error_message: str | None = None
+    # 送る直前の再確認【B-X2】：レポートを保存する直前に visibility_epoch が実行開始時
+    # から変わっていなければ True。False のときは、レポートは保存したがメール・
+    # アプリ内通知（7段目）を送ってはいけないという印（needs_rebuild も true のまま）。
+    notify_allowed: bool = True
 
 
 @dataclass(frozen=True)
@@ -200,6 +204,21 @@ def _check_deadline(deadline: float) -> None:
         raise RunTimeoutError
 
 
+def epoch_unchanged(conn: psycopg.Connection, project_id: UUID, epoch: int) -> bool:
+    """送る直前の再確認【B-X2】。
+
+    実行の開始時に控えた ``visibility_epoch`` が、今の値と一致するかを確かめる。
+    レポートを保存する直前にここで呼び、7段目（メール・アプリ内通知）は、送る
+    直前にもう一度この関数を呼んでから送る前提（可視性・除外・所属・ロールが
+    実行中に変わっていたら、メール・通知の内容が古くなっている可能性があるため）。
+    """
+
+    row = conn.execute(
+        "SELECT visibility_epoch FROM projects WHERE id = %s", (project_id,)
+    ).fetchone()
+    return row is not None and row[0] == epoch
+
+
 def _run_stages(
     run_id: UUID,
     *,
@@ -211,6 +230,10 @@ def _run_stages(
     _set_step(pool, run_id, "extracting")
 
     with pool.connection() as conn:
+        # 送る直前の再確認【B-X2】のため、実行の開始時に visibility_epoch を控える。
+        start_epoch = conn.execute(
+            "SELECT visibility_epoch FROM projects WHERE id = %s", (project_id,)
+        ).fetchone()[0]
         goal_description = _fetch_goal_description(conn, project_id)
         all_segments, managers_segments = _fetch_input_segments(conn, project_id)
         active_by_no = _fetch_active_events_by_partition_input(conn, project_id)
@@ -282,6 +305,9 @@ def _run_stages(
     _check_deadline(deadline)
 
     with pool.connection() as conn:
+        # レポートを保存する直前に、もう一度 visibility_epoch を確かめる【B-X2】。
+        notify_allowed = epoch_unchanged(conn, project_id, start_epoch)
+
         _build_and_store_report(
             conn,
             project_id=project_id,
@@ -310,13 +336,21 @@ def _run_stages(
                     | suspected_injection_by_partition["managers"]
                 ),
             )
-        conn.execute("UPDATE projects SET needs_rebuild = false WHERE id = %s", (project_id,))
+        # epoch が変わっていたら、レポートは保存するが needs_rebuild は true のまま
+        # にする（次の実行で今の状態から作り直す）。メール・通知を送るかどうかは
+        # notify_allowed を見て7段目が決める。
+        conn.execute(
+            "UPDATE projects SET needs_rebuild = %s WHERE id = %s",
+            (not notify_allowed, project_id),
+        )
         conn.commit()
 
     _set_step(pool, run_id, "notifying")  # メール・アプリ内通知は7段目で実装する。
 
     _finish_run(pool, run_id, status="done", outcome="report_created")
-    return RunOutcome(outcome="report_created", version_no=version_no)
+    return RunOutcome(
+        outcome="report_created", version_no=version_no, notify_allowed=notify_allowed
+    )
 
 
 # ---------------------------------------------------------------------------
