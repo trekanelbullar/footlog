@@ -81,12 +81,14 @@ def assemble_and_judge(
 ) -> AssembleAndJudgeResult:
     """設計書 §5.3 (9)(10) の一連（組み立て・機械の検査・Judge・1回だけのやり直し）。
 
-    Judge の指摘（``notes``）は、``AssembleInput`` の契約を変えられないため
-    やり直しのプロンプトには渡していない（相方と合意して契約を拡張すれば渡せる）。
+    やり直しのときは、Judge の指摘（``notes``）を組み立てのプロンプトに添える
+    （詳細設計書 4.2。契約の型は変えず、``assemble_report`` の任意の引数で渡す）。
     """
 
-    def _run_once() -> tuple[AssembleOutput, MechanicalCheckResult, JudgeVerdict]:
-        assembled = assemble_report(inp, llm)
+    def _run_once(
+        feedback: list[str] | None = None,
+    ) -> tuple[AssembleOutput, MechanicalCheckResult, JudgeVerdict]:
+        assembled = assemble_report(inp, llm, feedback=feedback)
         checked = apply_mechanical_checks(
             assembled,
             headings=headings,
@@ -98,7 +100,7 @@ def assemble_and_judge(
 
     assembled, checked, verdict = _run_once()
     if verdict.status == "fail":
-        assembled, checked, verdict = _run_once()
+        assembled, checked, verdict = _run_once(feedback=verdict.notes)
 
     judge_status: Literal["pass", "flagged"] = "pass" if verdict.status == "pass" else "flagged"
     return AssembleAndJudgeResult(output=assembled, check=checked, judge_status=judge_status)

@@ -24,10 +24,16 @@ _HEADINGS_BY_MODE: dict[str, tuple[str, ...]] = {
 _TEMPLATE_BY_MODE: dict[str, str] = {"diff": "assemble_diff", "baseline": "assemble_baseline"}
 
 
-def assemble_report(inp: AssembleInput, llm: LlmFn) -> AssembleOutput:
-    """契約は変えない（設計書 §6.4）。"""
+def assemble_report(
+    inp: AssembleInput, llm: LlmFn, *, feedback: list[str] | None = None
+) -> AssembleOutput:
+    """契約（入出力の型）は変えない（設計書 §6.4）。
 
-    messages = _build_messages(inp)
+    ``feedback`` は、Judge が不合格にしたときの指摘（やり直しのときだけ渡す）。任意の
+    キーワード引数なので、``assemble_report(inp, llm)`` の呼び方はそのまま使える。
+    """
+
+    messages = _build_messages(inp, feedback=feedback)
     result = llm("ASSEMBLE", messages, json_mode=True)
     text = getattr(result, "text", None)
     parsed = _parse(text) if isinstance(text, str) else None
@@ -72,7 +78,9 @@ def _parse(text: str) -> dict | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-def _build_messages(inp: AssembleInput) -> list[dict[str, object]]:
+def _build_messages(
+    inp: AssembleInput, *, feedback: list[str] | None = None
+) -> list[dict[str, object]]:
     template_name = _TEMPLATE_BY_MODE[inp.mode]
     system = render(get_prompts()[template_name], goal_description=inp.goal_description)
     new_event_nos = set(inp.new_event_nos)
@@ -82,6 +90,12 @@ def _build_messages(inp: AssembleInput) -> list[dict[str, object]]:
         reason = f"（理由：{event.reason}）" if event.reason else ""
         lines.append(f"- [{event.event_no}] {marker}{event.kind}: {event.summary}{reason}")
     user = "\n".join(lines) or "（出来事なし）"
+    if feedback:
+        # 詳細設計書 4.2：Judge の具体的な修正指示を添えて、1回だけ作り直す
+        notes = "\n".join(f"- {note}" for note in feedback)
+        user += (
+            f"\n\n# 前回の組み立てへの指摘（これを直して、もう一度 JSON で返してください）\n{notes}"
+        )
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
