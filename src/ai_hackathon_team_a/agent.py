@@ -304,12 +304,14 @@ def _run_single_event_loop(
         conn, candidate=candidate, goal_description=goal_description
     )
 
+    ask_only = False
     for _round in range(_MAX_TOOL_ROUNDS_PER_EVENT):
         tools = list(_TOOLS)
         if recipient is not None and not asked_this_event:
-            if _round == _MAX_TOOL_ROUNDS_PER_EVENT - 1:
-                # 最後の1回は質問だけを渡す。本番で search_events の空振りを繰り返して
-                # 上限を使い切り、一度も質問しなかった（2026-09-22、C5 の確認）。
+            if ask_only or _round == _MAX_TOOL_ROUNDS_PER_EVENT - 1:
+                # 質問せずに終わらせない。本番で、search_events の空振りで上限を使い切る・
+                # 質問せずに「わからない」と返す、の両方が起きた（2026-09-22、C5 の確認）。
+                # そこで最後の1回、または未解決の結論が来たときは、質問だけを渡す。
                 tools = [_ASK_MEMBER_TOOL]
                 messages.append({"role": "user", "content": _LAST_ROUND_NOTE})
             else:
@@ -320,7 +322,18 @@ def _run_single_event_loop(
         text = getattr(result, "text", None)
 
         if not tool_calls:
-            return _parse_final_answer(text, seen_segment_ids), asked_already
+            resolution = _parse_final_answer(text, seen_segment_ids)
+            if (
+                resolution is None
+                and recipient is not None
+                and not asked_this_event
+                and not ask_only
+                and _round < _MAX_TOOL_ROUNDS_PER_EVENT - 1
+            ):
+                messages.append({"role": "assistant", "content": text or ""})
+                ask_only = True
+                continue
+            return resolution, asked_already
 
         messages.append({"role": "assistant", "content": text or "", "tool_calls": tool_calls})
 

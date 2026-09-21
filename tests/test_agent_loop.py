@@ -91,3 +91,42 @@ def test_last_round_keeps_normal_tools_without_recipient(monkeypatch) -> None:
     )
 
     assert all("ask_member" not in names for names in offered)
+
+
+def test_unresolved_answer_gets_one_ask_only_round(monkeypatch) -> None:
+    """質問せずに「わからない」と返しても、一度だけ質問だけを渡して聞き直す。"""
+
+    monkeypatch.setattr(
+        agent, "_build_initial_messages", lambda conn, **kw: [{"role": "user", "content": "x"}]
+    )
+    asked: list[str] = []
+    monkeypatch.setattr(
+        agent, "_tool_ask_member", lambda conn, **kw: asked.append(kw["question"]) or True
+    )
+    offered: list[list[str]] = []
+
+    def fake_llm(stage, messages, *, json_mode, tools):
+        names = [t["function"]["name"] for t in tools or []]
+        offered.append(names)
+        if names == ["ask_member"]:
+            call = {"id": "c", "function": {"name": "ask_member", "arguments": '{"question": "q"}'}}
+            return SimpleNamespace(tool_calls=[call], text="")
+        return SimpleNamespace(tool_calls=None, text='{"resolved": false}')
+
+    recipient = agent._Recipient(user_id=uuid4(), email="m@example.com")
+    _, asked_flag = agent._run_single_event_loop(
+        None,
+        project_id=uuid4(),
+        run_id=uuid4(),
+        candidate=_candidate(),
+        llm_fn=fake_llm,
+        goal_description="g",
+        start_epoch=0,
+        worker_settings=None,
+        recipient=recipient,
+        mail_transport=None,
+    )
+
+    assert offered[1] == ["ask_member"]
+    assert asked == ["q"]
+    assert asked_flag is True
