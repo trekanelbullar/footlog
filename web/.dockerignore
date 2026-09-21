@@ -1,0 +1,5 @@
+# 秘密と、ビルドに要らないもの
+.env
+.env.*
+node_modules
+.next

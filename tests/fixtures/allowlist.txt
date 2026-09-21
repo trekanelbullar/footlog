@@ -11,3 +11,5 @@ process.env.WORKER_SHARED_SECRET
 # scripts/set_env.py とそのテストで、関数の名前を渡しているだけの箇所（値ではない）
 getpass.getpass
 script.ask_secret
+# web のサーバー側で、実行時の環境変数の名前を参照している箇所（値ではない）
+process.env.SUPABASE_PUBLISHABLE_KEY

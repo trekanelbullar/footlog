@@ -49,6 +49,31 @@ function mockUserIdFromToken(accessToken: string): string {
   return accessToken.replace(/^mock:/, "");
 }
 
+// ---- Cloud Run の IAM 認証（design.md §11）----
+// worker を「認証が必要」で動かすとき、web のサービスアカウントの ID トークンを
+// X-Serverless-Authorization で送る（Authorization にはユーザーの JWT が入るため）。
+// WORKER_ID_TOKEN_AUDIENCE（worker の URL）が設定されているときだけ使う（手元では使わない）。
+let cachedIdToken: { token: string; expiresAt: number } | null = null;
+
+async function workerIdToken(): Promise<string | null> {
+  const audience = process.env.WORKER_ID_TOKEN_AUDIENCE;
+  if (!audience) return null;
+  const now = Date.now();
+  if (cachedIdToken && cachedIdToken.expiresAt > now) return cachedIdToken.token;
+
+  const url =
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity" +
+    `?audience=${encodeURIComponent(audience)}`;
+  const res = await fetch(url, { headers: { "Metadata-Flavor": "Google" } });
+  if (!res.ok) {
+    throw new Error(`ID トークンを取得できませんでした（${res.status}）。`);
+  }
+  const token = (await res.text()).trim();
+  // Google の ID トークンの有効期限は1時間。余裕をみて50分で取り直す。
+  cachedIdToken = { token, expiresAt: now + 50 * 60 * 1000 };
+  return token;
+}
+
 async function callWorker<T>(
   path: string,
   init: {
@@ -69,6 +94,10 @@ async function callWorker<T>(
   };
   if (init.session) {
     headers["Authorization"] = `Bearer ${init.session.accessToken}`;
+  }
+  const idToken = await workerIdToken();
+  if (idToken) {
+    headers["X-Serverless-Authorization"] = `Bearer ${idToken}`;
   }
 
   let body: BodyInit | undefined;

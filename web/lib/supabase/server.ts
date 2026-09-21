@@ -9,9 +9,16 @@ import { cookies } from "next/headers";
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
 
+  // Cloud Run では実行時に渡す SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY を優先する。
+  // NEXT_PUBLIC_ で始まる変数は next build のときにコードへ埋め込まれ、実行時の設定が
+  // 効かないため（手元の開発では web/.env.local の NEXT_PUBLIC_ の値を使う）。
+  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl!,
+    supabaseKey!,
     {
       cookies: {
         getAll() {
