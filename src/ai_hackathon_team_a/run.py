@@ -136,10 +136,13 @@ def execute_run(
     """
 
     with pool.connection() as conn:
-        row = conn.execute("SELECT project_id FROM runs WHERE id = %s", (run_id,)).fetchone()
+        row = conn.execute(
+            "SELECT project_id, trigger FROM runs WHERE id = %s", (run_id,)
+        ).fetchone()
     if row is None:
         raise ValueError(f"run {run_id} not found")
     project_id: UUID = row[0]
+    trigger: str = row[1]
 
     with pool.connection() as conn:
         claimed = conn.execute(
@@ -165,6 +168,7 @@ def execute_run(
         return _run_claimed(
             run_id,
             project_id=project_id,
+            trigger=trigger,
             pool=pool,
             llm_call=llm_call,
             worker_settings=worker_settings,
@@ -196,6 +200,7 @@ def _run_claimed(
     run_id: UUID,
     *,
     project_id: UUID,
+    trigger: str,
     pool: ConnectionPool,
     llm_call,
     worker_settings: WorkerSettings,
@@ -219,6 +224,7 @@ def _run_claimed(
         return _run_stages(
             run_id,
             project_id=project_id,
+            allow_regeneration=(trigger == "schedule"),
             pool=pool,
             llm_fn=llm_fn,
             deadline=deadline,
@@ -267,6 +273,7 @@ def _run_stages(
     run_id: UUID,
     *,
     project_id: UUID,
+    allow_regeneration: bool,
     pool: ConnectionPool,
     llm_fn,
     deadline: float,
@@ -382,6 +389,7 @@ def _run_stages(
         new_event_nos=set(new_event_nos),
         llm_fn=llm_fn,
         suspected_injection_labels=suspected_injection_by_partition["all"],
+        allow_regeneration=allow_regeneration,
     )
     built_managers = (
         _build_report(
@@ -395,6 +403,7 @@ def _run_stages(
                 suspected_injection_by_partition["all"]
                 | suspected_injection_by_partition["managers"]
             ),
+            allow_regeneration=allow_regeneration,
         )
         if build_managers_report
         else None
@@ -959,6 +968,7 @@ def _build_report(
     new_event_nos: set[int],
     llm_fn,
     suspected_injection_labels: set[str],
+    allow_regeneration: bool,
 ) -> _BuiltReport:
     """レポートの中身を作る（LLM を呼ぶ）。DB には触れない。"""
 
@@ -981,6 +991,7 @@ def _build_report(
         headings=headings,
         valid_event_nos=valid_event_nos,
         unsupported_event_nos=unsupported_event_nos,
+        allow_regeneration=allow_regeneration,
     )
 
     render_events = [
