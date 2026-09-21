@@ -230,7 +230,8 @@ export async function w9CreateFileSource(
       file.name,
       content,
       recorded_at,
-      visibility
+      visibility,
+      file.size
     );
   }
   const formData = new FormData();

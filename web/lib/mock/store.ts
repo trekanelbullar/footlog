@@ -843,6 +843,20 @@ export function mockRemoveMember(pid: string, userId: string, targetUserId: stri
 
 // ---- W8〜W13：ソース ----
 
+// design.md §4 の1／worker の _ALLOWED_EXTENSIONS・_MAX_FILE_BYTES と同じ制限。
+const ALLOWED_FILE_EXTENSIONS = new Set([
+  ".txt",
+  ".md",
+  ".csv",
+  ".py",
+  ".ts",
+  ".js",
+  ".json",
+  ".xlsx",
+  ".pdf",
+]);
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 function redactCount(text: string): number {
   // モック用の簡易な伏せ字カウント（本物の redact.py は worker 側にある）。
   const patterns = [/sk-[A-Za-z0-9]{10,}/g, /AKIA[0-9A-Z]{16}/g, /-----BEGIN [A-Z ]*PRIVATE KEY-----/g];
@@ -906,10 +920,19 @@ export function mockCreateFileSource(
   filename: string,
   content: string,
   recorded_at: string | undefined,
-  visibility: Visibility
+  visibility: Visibility,
+  fileSize: number
 ): CreateSourceOutput {
   const p = getProjectOr404(pid);
   getMemberOr404(p, userId);
+  const dotIndex = filename.lastIndexOf(".");
+  const suffix = dotIndex >= 0 ? filename.slice(dotIndex).toLowerCase() : "";
+  if (!ALLOWED_FILE_EXTENSIONS.has(suffix)) {
+    err(400, "unsupported_file_type", `${suffix || "(拡張子なし)"} は取り込めません。`);
+  }
+  if (fileSize > MAX_FILE_BYTES) {
+    err(400, "file_too_large", "ファイルは10MBまでです。");
+  }
   const existing = p.sources.find(
     (s) => s.type === "file" && s.uploaded_by === userId && s.filename === filename
   );

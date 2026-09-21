@@ -98,7 +98,8 @@ export interface LatestRunSummary {
   status: RunStatus;
   step: RunStep | null;
   outcome: RunOutcome | null;
-  version_no: number | null;
+  started_at: string | null;
+  finished_at: string | null;
 }
 
 /** W3: GET /internal/projects/{pid} */
