@@ -135,7 +135,9 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
     (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
+        // 横に長い時系列を枠に合わせて縮めると読めない大きさになるため、元の大きさで描いて
+        // 横にスクロールさせる（useMaxWidth: false）。
+        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", flowchart: { useMaxWidth: false } });
         const id = `mermaid-v${report.version_no}-${Math.random().toString(36).slice(2, 8)}`;
         const result = await mermaid.render(id, dsl);
         clearTimeout(timeoutId);
@@ -158,6 +160,9 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
   useEffect(() => {
     if (!diagramOpen || diagramState !== "ok" || !containerRef.current) return;
     const container = containerRef.current;
+    // 開いたときは最新（右端）を見せる。
+    const scroller = container.parentElement;
+    if (scroller) scroller.scrollLeft = scroller.scrollWidth;
     const cleanups: (() => void)[] = [];
 
     for (const nodeId of Object.keys(report.node_evidence)) {
