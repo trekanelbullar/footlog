@@ -92,3 +92,21 @@ def test_missing_value_stops_before_any_gcloud_call() -> None:
         push_secrets.push(values, run=gcloud, say=lambda _m: None)
 
     assert gcloud.calls == []
+
+
+def test_failure_message_includes_gcloud_reason_but_not_the_value() -> None:
+    values = _values()
+
+    def failing_run(argv, *, input=None, capture_output=False, check=False, text=False):  # noqa: A002
+        if argv[:3] == ["gcloud", "secrets", "describe"]:
+            return subprocess.CompletedProcess(argv, 1, b"", b"")
+        return subprocess.CompletedProcess(
+            argv, 1, b"", b"ERROR: (gcloud.secrets.create) PERMISSION_DENIED: denied\nmore"
+        )
+
+    with pytest.raises(push_secrets.PushError) as excinfo:
+        push_secrets.push(values, run=failing_run, say=lambda _m: None)
+
+    message = str(excinfo.value)
+    assert "PERMISSION_DENIED" in message
+    assert all(value not in message for value in values.values())

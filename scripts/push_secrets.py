@@ -96,11 +96,21 @@ def push(values: dict[tuple[str, str], str], *, run: Run, say: Say) -> None:
 
         result = run(command, input=value.encode("utf-8"), capture_output=True, check=False)
         if result.returncode != 0:
-            # gcloud のエラー文に値が含まれることは無いが、念のため種類だけを出す
+            # 値は標準入力で渡しているので、gcloud のエラー文に値は含まれない。
+            # 理由がわかるよう、エラー文の最初の行だけを添える。
             raise PushError(
-                f"{secret_name} の登録に失敗しました（gcloud の終了コード {result.returncode}）。"
+                f"{secret_name} の登録に失敗しました（gcloud の終了コード {result.returncode}）："
+                f"{_first_error_line(result.stderr)}"
             )
         say(f"  {secret_name:32} {action}（{key}）")
+
+
+def _first_error_line(stderr: bytes | str | None) -> str:
+    text = stderr.decode("utf-8", "replace") if isinstance(stderr, bytes) else (stderr or "")
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()[:200]
+    return "（エラーの説明なし）"
 
 
 def current_project(run: Run) -> str:
