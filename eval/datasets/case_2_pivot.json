@@ -1,0 +1,140 @@
+{
+  "case_id": "case_2_pivot",
+  "category": "途中で方針転換",
+  "description": "最初に決めた方式(FCM)を実装中に問題が見つかり、別方式(SNS)へ転換する会話。",
+  "goal_description": "モバイルアプリのプッシュ通知基盤の刷新プロジェクト",
+  "segments": [
+    {
+      "label": "S2-1",
+      "speaker": "user",
+      "recorded_at": "2026-08-10T09:00:00+09:00",
+      "text": "プッシュ通知の送信基盤を新しくする件、いくつか案を並べてみた。Firebase Cloud Messaging(FCM)、AWS SNS、自前のWebSocketサーバーの3つ。"
+    },
+    {
+      "label": "S2-2",
+      "speaker": "user",
+      "recorded_at": "2026-08-10T09:02:00+09:00",
+      "text": "自前のWebSocketサーバーは常時接続の管理やスケーリングが大変そう。24時間365日の監視体制も必要になる。"
+    },
+    {
+      "label": "S2-3",
+      "speaker": "user",
+      "recorded_at": "2026-08-10T09:03:00+09:00",
+      "text": "自前のWebSocketサーバーは運用負荷が高すぎるので、今回は候補から外していいと思う。"
+    },
+    {
+      "label": "S2-4",
+      "speaker": "user",
+      "recorded_at": "2026-08-10T09:08:00+09:00",
+      "text": "同意。FCMとSNSならFCMの方が既存のAndroid/iOSアプリのSDK連携実績があるので導入が早そう。社内の別チームでも使っている。"
+    },
+    {
+      "label": "S2-5",
+      "speaker": "user",
+      "recorded_at": "2026-08-10T09:10:00+09:00",
+      "text": "コスト面でも大差はなさそうだし、既存の知見が使えるならFCMから始めるのが妥当だと思う。"
+    },
+    {
+      "label": "S2-6",
+      "speaker": "user",
+      "recorded_at": "2026-08-10T09:15:00+09:00",
+      "text": "決定：初期案としてFirebase Cloud Messaging(FCM)を採用することにした。理由：導入コストが低く、既存アプリとの親和性も高いため。"
+    },
+    {
+      "label": "S2-7",
+      "speaker": "user",
+      "recorded_at": "2026-08-10T09:17:00+09:00",
+      "text": "了解、来週から実装を始める。まずは検証環境でのトークン発行周りから着手します。"
+    },
+    {
+      "label": "S2-8",
+      "speaker": "user",
+      "recorded_at": "2026-08-14T11:00:00+09:00",
+      "text": "検証環境でのトークン発行は問題なく動いている。今週から本番相当の負荷での検証に入る。"
+    },
+    {
+      "label": "S2-9",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:00:00+09:00",
+      "text": "実装を進めたところ、FCMは一部の海外リージョン(特に南米・東南アジアの一部)で配信遅延が大きいことが判明した。平均で10秒以上遅れるケースがある。"
+    },
+    {
+      "label": "S2-10",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:05:00+09:00",
+      "text": "うちのユーザーの2割くらいは該当リージョンにいるはずだから、これは無視できない規模かも。"
+    },
+    {
+      "label": "S2-11",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:08:00+09:00",
+      "text": "念のため計測方法に問題が無いかも確認したけど、再現性はあるみたい。3回計測して毎回同じ傾向だった。"
+    },
+    {
+      "label": "S2-12",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:10:00+09:00",
+      "text": "念のため同じ条件(同じメッセージサイズ・同じ配信先リージョン)でAWS SNSでも計測してみたところ、遅延はFCMの1/3程度だった。"
+    },
+    {
+      "label": "S2-13",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:15:00+09:00",
+      "text": "SNSの方が良さそうだけど、SDK連携の作り直しが発生するのが懸念。工数はどれくらいになりそう?"
+    },
+    {
+      "label": "S2-14",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:18:00+09:00",
+      "text": "トークン管理部分は共通化できそうなので、実装済みの部分の大半は流用できる見込み。追加で3人日くらいだと思う。"
+    },
+    {
+      "label": "S2-15",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:19:00+09:00",
+      "text": "3人日くらいなら許容範囲かな。遅延の方が業務影響として大きいと思う。"
+    },
+    {
+      "label": "S2-16",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:20:00+09:00",
+      "text": "決定：この遅延は業務要件的に許容できないため、方針転換してAWS SNSに切り替えることにした。理由：配信遅延の実測値がFCMの1/3だったため。"
+    },
+    {
+      "label": "S2-17",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:25:00+09:00",
+      "text": "了解、FCM向けの実装をSNS向けに置き換える作業を来週から進める。"
+    },
+    {
+      "label": "S2-18",
+      "speaker": "user",
+      "recorded_at": "2026-08-17T14:30:00+09:00",
+      "text": "念のため既存ユーザーへの通知が途切れないよう、移行期間中は両方を並行稼働させることにする。1ヶ月くらいを想定。"
+    }
+  ],
+  "expected_events": [
+    {
+      "kind": "decision",
+      "segment_ids": ["S2-6"],
+      "origin": "human_originated",
+      "reason_present": true,
+      "note": "初期決定：FCM採用(後にS2-16で置き換えられる)"
+    },
+    {
+      "kind": "finding",
+      "segment_ids": ["S2-9"],
+      "origin": "human_originated",
+      "reason_present": false,
+      "note": "FCMの配信遅延が判明"
+    },
+    {
+      "kind": "decision",
+      "segment_ids": ["S2-16"],
+      "origin": "human_originated",
+      "reason_present": true,
+      "note": "方針転換：AWS SNSへの切り替え決定。S2-6の決定をsupersedesする想定"
+    }
+  ],
+  "expected_injection_segment_ids": []
+}

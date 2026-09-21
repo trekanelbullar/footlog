@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 440" font-family="sans-serif" font-size="11">
+<style>.bg{fill:#fcfcfb}.ink{fill:#0b0b0b}.ink2{fill:#52514e}.grid{stroke:#e4e3de}.axis{stroke:#8a8983}.s1{fill:#2a78d6}.s2{fill:#eb6834}.s3{fill:#1baf7a}@media (prefers-color-scheme: dark){.bg{fill:#1a1a19}.ink{fill:#fff}.ink2{fill:#c3c2b7}.grid{stroke:#34332f}.s1{fill:#3987e5}.s2{fill:#d95926}.s3{fill:#199e70}}</style>
+<rect class="bg" width="1040" height="440"/>
+<text class="ink" x="60" y="24" font-size="13">段階1 抽出：F1 × 1ケースあたり費用</text>
+<line class="grid" x1="60.0" y1="360.0" x2="60.0" y2="80.0"/><text class="ink2" x="60.0" y="376.0" text-anchor="middle">$0.0001</text>
+<line class="grid" x1="160.0" y1="360.0" x2="160.0" y2="80.0"/><text class="ink2" x="160.0" y="376.0" text-anchor="middle">$0.001</text>
+<line class="grid" x1="260.0" y1="360.0" x2="260.0" y2="80.0"/><text class="ink2" x="260.0" y="376.0" text-anchor="middle">$0.01</text>
+<line class="grid" x1="360.0" y1="360.0" x2="360.0" y2="80.0"/><text class="ink2" x="360.0" y="376.0" text-anchor="middle">$0.1</text>
+<line class="grid" x1="460.0" y1="360.0" x2="460.0" y2="80.0"/><text class="ink2" x="460.0" y="376.0" text-anchor="middle">$1</text>
+<line class="grid" x1="60.0" y1="360.0" x2="460.0" y2="360.0"/><text class="ink2" x="54" y="364.0" text-anchor="end">0</text>
+<line class="grid" x1="60.0" y1="290.0" x2="460.0" y2="290.0"/><text class="ink2" x="54" y="294.0" text-anchor="end">0.25</text>
+<line class="grid" x1="60.0" y1="220.0" x2="460.0" y2="220.0"/><text class="ink2" x="54" y="224.0" text-anchor="end">0.5</text>
+<line class="grid" x1="60.0" y1="150.0" x2="460.0" y2="150.0"/><text class="ink2" x="54" y="154.0" text-anchor="end">0.75</text>
+<line class="grid" x1="60.0" y1="80.0" x2="460.0" y2="80.0"/><text class="ink2" x="54" y="84.0" text-anchor="end">1</text>
+<text class="ink2" x="260.0" y="430" text-anchor="middle">1ケースあたり費用 USD（対数軸）</text>
+<circle class="s1" cx="77.0" cy="186.8" r="5" stroke="#fcfcfb" stroke-width="2"><title>qwen3.7-flash: 0.619 / $0.00015</title></circle><text class="ink" x="85.0" y="180.8">qwen3.7-flash</text>
+<circle class="s2" cx="144.4" cy="195.3" r="5" stroke="#fcfcfb" stroke-width="2"><title>qwen3.7-flash (low): 0.588 / $0.00070</title></circle><text class="ink" x="152.4" y="202.3">qwen3.7-flash (low)</text>
+<circle class="s1" cx="134.3" cy="228.2" r="5" stroke="#fcfcfb" stroke-width="2"><title>glm-5.3-flash: 0.471 / $0.00055</title></circle><text class="ink" x="142.3" y="222.2">glm-5.3-flash</text>
+<circle class="s1" cx="174.6" cy="228.8" r="5" stroke="#fcfcfb" stroke-width="2"><title>gpt-5.4-nano: 0.469 / $0.00140</title></circle><text class="ink" x="182.6" y="235.8">gpt-5.4-nano</text>
+<circle class="s2" cx="182.3" cy="233.7" r="5" stroke="#fcfcfb" stroke-width="2"><title>gpt-5.4-nano (low): 0.451 / $0.00167</title></circle><text class="ink" x="190.3" y="253.7">gpt-5.4-nano (low)</text>
+<circle class="s1" cx="153.2" cy="256.2" r="5" stroke="#fcfcfb" stroke-width="2"><title>deepseek-v4.1-flash: 0.371 / $0.00086</title></circle><text class="ink" x="161.2" y="276.2">deepseek-v4.1-flash</text>
+<circle class="s1" cx="372.3" cy="272.0" r="5" stroke="#fcfcfb" stroke-width="2"><title>claude-opus-5: 0.314 / $0.13263</title></circle><text class="ink" x="380.3" y="266.0">claude-opus-5</text>
+<circle class="s1" cx="153.4" cy="277.6" r="5" stroke="#fcfcfb" stroke-width="2"><title>gemini-2.5-flash-lite: 0.294 / $0.00086</title></circle><text class="ink" x="161.4" y="297.6">gemini-2.5-flash-lite</text>
+<text class="ink" x="580" y="24" font-size="13">段階3 構成A/B/C：総合スコア × 1ケースあたり費用</text>
+<line class="grid" x1="580.0" y1="360.0" x2="580.0" y2="80.0"/><text class="ink2" x="580.0" y="376.0" text-anchor="middle">$0.0001</text>
+<line class="grid" x1="780.0" y1="360.0" x2="780.0" y2="80.0"/><text class="ink2" x="780.0" y="376.0" text-anchor="middle">$0.001</text>
+<line class="grid" x1="980.0" y1="360.0" x2="980.0" y2="80.0"/><text class="ink2" x="980.0" y="376.0" text-anchor="middle">$0.01</text>
+<line class="grid" x1="580.0" y1="360.0" x2="980.0" y2="360.0"/><text class="ink2" x="574" y="364.0" text-anchor="end">0</text>
+<line class="grid" x1="580.0" y1="290.0" x2="980.0" y2="290.0"/><text class="ink2" x="574" y="294.0" text-anchor="end">0.25</text>
+<line class="grid" x1="580.0" y1="220.0" x2="980.0" y2="220.0"/><text class="ink2" x="574" y="224.0" text-anchor="end">0.5</text>
+<line class="grid" x1="580.0" y1="150.0" x2="980.0" y2="150.0"/><text class="ink2" x="574" y="154.0" text-anchor="end">0.75</text>
+<line class="grid" x1="580.0" y1="80.0" x2="980.0" y2="80.0"/><text class="ink2" x="574" y="84.0" text-anchor="end">1</text>
+<text class="ink2" x="780.0" y="430" text-anchor="middle">1ケースあたり費用 USD（対数軸）</text>
+<circle class="s3" cx="692.5" cy="157.8" r="5" stroke="#fcfcfb" stroke-width="2"><title>構成C (qwen / qwen): 0.722 / $0.00037</title></circle><text class="ink" x="700.5" y="151.8">構成C (qwen / qwen)</text>
+<circle class="s3" cx="693.7" cy="166.2" r="5" stroke="#fcfcfb" stroke-width="2"><title>構成B (qwen / qwen): 0.692 / $0.00037</title></circle><text class="ink" x="701.7" y="173.2">構成B (qwen / qwen)</text>
+<circle class="s3" cx="691.2" cy="180.1" r="5" stroke="#fcfcfb" stroke-width="2"><title>構成A (qwen / qwen): 0.642 / $0.00036</title></circle><text class="ink" x="699.2" y="187.1">構成A (qwen / qwen)</text>
+<circle class="s3" cx="819.8" cy="182.6" r="5" stroke="#fcfcfb" stroke-width="2"><title>構成B (nano / qwen): 0.634 / $0.00158</title></circle><text class="ink" x="827.8" y="176.6">構成B (nano / qwen)</text>
+<circle class="s3" cx="691.6" cy="183.9" r="5" stroke="#fcfcfb" stroke-width="2"><title>構成C (nano / qwen): 0.629 / $0.00036</title></circle><text class="ink" x="699.6" y="203.9">構成C (nano / qwen)</text>
+<circle class="s3" cx="895.9" cy="199.7" r="5" stroke="#fcfcfb" stroke-width="2"><title>構成A (nano / qwen): 0.573 / $0.00380</title></circle><text class="ink" x="903.9" y="193.7">構成A (nano / qwen)</text>
+<circle class="s1" cx="740" cy="42" r="5"/><text class="ink2" x="750" y="46">思考 off</text><circle class="s2" cx="820" cy="42" r="5"/><text class="ink2" x="830" y="46">思考 low</text><circle class="s3" cx="900" cy="42" r="5"/><text class="ink2" x="910" y="46">構成A/B/C</text>
+</svg>

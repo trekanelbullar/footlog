@@ -1,0 +1,97 @@
+{
+  "description": "裏付け検査(check_support)の検査用データ。SupportInput.items と同じ形(event + segments)に、正解ラベル(expected_result: supported|unsupported)を添えたもの。前半2件は要約・理由が原文の内容と一致する「正しい組」、後半2件はcase_*.jsonの別の出来事の原文をわざと付け替えた「食い違わせた組」。",
+  "cases": [
+    {
+      "case_id": "support_1_matched_decision",
+      "note": "正しい組：case_1のFastAPI決定と、その根拠のS1-11をそのまま対応させる。",
+      "expected_result": "supported",
+      "event": {
+        "kind": "decision",
+        "summary": "APIをFastAPI(Python)で書き直すことを決定した",
+        "reason": "チームの主要言語がPythonであり、分析基盤との連携もしやすく、型安全性の恩恵も受けられるため",
+        "occurred_at": "2026-08-03T10:20:00+09:00",
+        "segment_ids": ["S1-11"],
+        "origin": "human_originated",
+        "supersedes_event_no": null,
+        "conflicts_with_event_no": null
+      },
+      "segments": [
+        {
+          "label": "S1-11",
+          "speaker": "user",
+          "recorded_at": "2026-08-03T10:20:00+09:00",
+          "text": "決定：新しいAPIはFastAPI(Python)で書き直すことにした。理由：チームの主要言語がPythonであり、分析基盤との連携もしやすく、型安全性の恩恵も受けられるため。"
+        }
+      ]
+    },
+    {
+      "case_id": "support_2_matched_rejected_option",
+      "note": "正しい組：case_3のElasticsearch却下と、その根拠のS3-6をそのまま対応させる。",
+      "expected_result": "supported",
+      "event": {
+        "kind": "rejected_option",
+        "summary": "Elasticsearch導入を却下した",
+        "reason": "運用コストと学習コストが見合わないため",
+        "occurred_at": "2026-08-20T11:15:00+09:00",
+        "segment_ids": ["S3-6"],
+        "origin": "human_originated",
+        "supersedes_event_no": null,
+        "conflicts_with_event_no": null
+      },
+      "segments": [
+        {
+          "label": "S3-6",
+          "speaker": "user",
+          "recorded_at": "2026-08-20T11:15:00+09:00",
+          "text": "決定：(1)Elasticsearch導入は今回は却下することにした。理由：運用コストと学習コストが見合わないため。"
+        }
+      ]
+    },
+    {
+      "case_id": "support_3_mismatched_topic",
+      "note": "わざと食い違わせた組：DB統一の決定(要約・理由)に対して、根拠として渡す原文はcase_4の認証方式の決定(S4-9)にすり替えてある。話題が違うため裏付けにならない。",
+      "expected_result": "unsupported",
+      "event": {
+        "kind": "decision",
+        "summary": "DBをPostgreSQLへ統一することを決定した",
+        "reason": "既存の分析基盤と接続しやすく、運用するDBの種類を減らせるため",
+        "occurred_at": "2026-08-03T10:30:00+09:00",
+        "segment_ids": ["S4-9"],
+        "origin": "human_originated",
+        "supersedes_event_no": null,
+        "conflicts_with_event_no": null
+      },
+      "segments": [
+        {
+          "label": "S4-9",
+          "speaker": "user",
+          "recorded_at": "2026-09-01T10:05:00+09:00",
+          "text": "決定：認証方式にGoogle OAuthを追加することにする。"
+        }
+      ]
+    },
+    {
+      "case_id": "support_4_mismatched_reason",
+      "note": "わざと食い違わせた組：キャッシュ層却下の要約に対して、根拠として渡す原文はcase_5の作業ログ(S5-3、スロークエリログの確認)にすり替えてある。却下の理由も決定そのものも原文には出てこない。",
+      "expected_result": "unsupported",
+      "event": {
+        "kind": "rejected_option",
+        "summary": "キャッシュ層の追加を却下した",
+        "reason": "在庫データなど即時性が必要なデータの整合性が崩れるリスクがあるため",
+        "occurred_at": "2026-08-20T11:30:00+09:00",
+        "segment_ids": ["S5-3"],
+        "origin": "human_originated",
+        "supersedes_event_no": null,
+        "conflicts_with_event_no": null
+      },
+      "segments": [
+        {
+          "label": "S5-3",
+          "speaker": "user",
+          "recorded_at": "2026-08-27T09:20:00+09:00",
+          "text": "DBのスロークエリログを直近1週間分取得して確認した。上位20件のクエリをリストアップしてスプレッドシートに貼り付けた。"
+        }
+      ]
+    }
+  ]
+}

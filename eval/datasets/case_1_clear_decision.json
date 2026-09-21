@@ -1,0 +1,139 @@
+{
+  "case_id": "case_1_clear_decision",
+  "category": "決定が明確",
+  "description": "API刷新の技術選定で、理由つきの決定が2件はっきり書かれている会話。",
+  "goal_description": "社内タスク管理ツールのAPIをリプレースするプロジェクト",
+  "segments": [
+    {
+      "label": "S1-1",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:00:00+09:00",
+      "text": "現状のタスク管理ツールのAPIはNode.js + Expressで書かれているが、型が付いておらず、実行時エラーの原因調査に毎回時間がかかっている。そろそろ書き直しを検討したい。"
+    },
+    {
+      "label": "S1-2",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:03:00+09:00",
+      "text": "先月も、undefinedを想定していない箇所でnullが渡ってきて本番エラーになった件があったよね。ああいうのを型で防ぎたい。"
+    },
+    {
+      "label": "S1-3",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:05:00+09:00",
+      "text": "候補としてFastAPI(Python)とNode.js+TypeScriptの両方を比較してみた。どちらも型は付けられるし、既存のフロントとの通信仕様(REST + JSON)は変えなくて済みそう。"
+    },
+    {
+      "label": "S1-4",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:08:00+09:00",
+      "text": "Node.js+TypeScriptなら既存のExpressのルーティング定義をほぼそのまま活かせるのもメリットかな。書き直す範囲が小さく済みそう。"
+    },
+    {
+      "label": "S1-5",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:10:00+09:00",
+      "text": "個人的にはFastAPIの方がチームの分析基盤(Pythonのバッチ処理群)との知見の親和性が高いと思う。エンジニアBはどう思う?"
+    },
+    {
+      "label": "S1-6",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:11:00+09:00",
+      "text": "自分もPython寄りの意見。ただ移行の学習コストと、既存のExpressミドルウェア(認証周り)の移植量が気になる。"
+    },
+    {
+      "label": "S1-7",
+      "speaker": "ai",
+      "recorded_at": "2026-08-03T10:12:00+09:00",
+      "text": "FastAPIとNode.js+TypeScriptの比較を整理すると、開発速度・型安全性・チームの習熟度・既存資産の再利用性の4点で差が出そうです。特に認証ミドルウェアの移植コストはFastAPI側でやや高めに見積もられます。"
+    },
+    {
+      "label": "S1-8",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:15:00+09:00",
+      "text": "認証ミドルウェアは移植というより、OAuthライブラリを使って作り直す形になりそう。それなら工数はそこまで変わらないはず。"
+    },
+    {
+      "label": "S1-9",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:16:00+09:00",
+      "text": "なるほど、それなら型安全性のメリットの方が大きいかもしれないね。"
+    },
+    {
+      "label": "S1-10",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:18:00+09:00",
+      "text": "了解、それなら懸念は解消できそう。移行期間は2週間くらいを見ておけばよさそうかな。"
+    },
+    {
+      "label": "S1-11",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:20:00+09:00",
+      "text": "決定：新しいAPIはFastAPI(Python)で書き直すことにした。理由：チームの主要言語がPythonであり、分析基盤との連携もしやすく、型安全性の恩恵も受けられるため。"
+    },
+    {
+      "label": "S1-12",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:22:00+09:00",
+      "text": "了解、来週から移行作業に着手する。まずはエンドポイントの棚卸しから始めます。全部で30エンドポイントくらいあるはず。"
+    },
+    {
+      "label": "S1-13",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:25:00+09:00",
+      "text": "あわせてDBの話もしておきたい。今はMySQLとPostgreSQLが混在していて、運用が煩雑になっている。バックアップの仕組みも別々に管理していて負担が大きい。"
+    },
+    {
+      "label": "S1-14",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:27:00+09:00",
+      "text": "そうそう、監視ダッシュボードも2種類作らないといけなくて二度手間になっている。"
+    },
+    {
+      "label": "S1-15",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:28:00+09:00",
+      "text": "分析基盤側はもともとPostgreSQLを使っているので、そちらに寄せる方が接続もシンプルになりそう。MySQL固有の機能はほとんど使っていないはず。"
+    },
+    {
+      "label": "S1-16",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:29:00+09:00",
+      "text": "確認したけど、MySQL固有の全文検索機能を1箇所だけ使っている。そこはPostgreSQLの拡張機能で代替できそう。"
+    },
+    {
+      "label": "S1-17",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:30:00+09:00",
+      "text": "決定：DBもPostgreSQLへ統一することにした。理由：既存の分析基盤と接続しやすく、運用するDBの種類を減らせるため。"
+    },
+    {
+      "label": "S1-18",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:32:00+09:00",
+      "text": "承知しました。マイグレーション計画を来週中に作成して共有します。データ移行の検証手順も含めて整理します。"
+    },
+    {
+      "label": "S1-19",
+      "speaker": "user",
+      "recorded_at": "2026-08-03T10:34:00+09:00",
+      "text": "ありがとう。何か他に懸念点があれば早めに共有してください。"
+    }
+  ],
+  "expected_events": [
+    {
+      "kind": "decision",
+      "segment_ids": ["S1-11"],
+      "origin": "human_originated",
+      "reason_present": true,
+      "note": "APIをFastAPIで書き直す決定"
+    },
+    {
+      "kind": "decision",
+      "segment_ids": ["S1-17"],
+      "origin": "human_originated",
+      "reason_present": true,
+      "note": "DBをPostgreSQLに統一する決定"
+    }
+  ],
+  "expected_injection_segment_ids": []
+}
