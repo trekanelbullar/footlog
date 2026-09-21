@@ -12,6 +12,7 @@ import psycopg
 
 Role = Literal["member", "manager"]
 Audience = Literal["all", "managers"]
+Visibility = Literal["all", "managers_only"]
 
 
 @dataclass(frozen=True)
@@ -110,3 +111,57 @@ def fetch_report_version_scoped(
     if row is None:
         return None
     return ReportVersionRow(id=row[0], project_id=row[1], version_no=row[2], audience=row[3])
+
+
+@dataclass(frozen=True)
+class SourceRow:
+    """W13（``/sources/{sid}/download-url``）のように、pid を持たない API 用（§1.3）。"""
+
+    id: UUID
+    project_id: UUID
+    source_no: int
+    type: Literal["file", "conversation", "answer"]
+    filename: str | None
+    uploaded_by: UUID
+    visibility: Visibility
+    is_excluded: bool
+    current_version_id: UUID | None
+
+
+def fetch_source_with_project(conn: psycopg.Connection, *, source_id: UUID) -> SourceRow | None:
+    """(a) の別例：pid を持たない API 用に、sid だけからプロジェクトを引く（§1.3）。"""
+
+    row = conn.execute(
+        """
+        SELECT id, project_id, source_no, type, filename, uploaded_by, visibility,
+               is_excluded, current_version_id
+        FROM project_sources
+        WHERE id = %s
+        """,
+        (source_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return SourceRow(
+        id=row[0],
+        project_id=row[1],
+        source_no=row[2],
+        type=row[3],
+        filename=row[4],
+        uploaded_by=row[5],
+        visibility=row[6],
+        is_excluded=row[7],
+        current_version_id=row[8],
+    )
+
+
+def can_view_source(*, membership: Membership, source: SourceRow) -> bool:
+    """権限表（§1.3）の「ソース一覧の閲覧」「期限つきURLの発行」の可視範囲。
+
+    manager はプロジェクト内のすべてのソースを見られる。member は ``all`` の
+    ソースと、自分が登録したソースだけ見られる。
+    """
+
+    if membership.role == "manager":
+        return True
+    return source.visibility == "all" or source.uploaded_by == membership.user_id

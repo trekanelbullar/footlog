@@ -7,9 +7,30 @@
 from pathlib import Path
 
 import psycopg
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # repo 直下の db/migrations/（このファイルは src/ai_hackathon_team_a/ 配下にある）。
 DEFAULT_MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "db" / "migrations"
+
+
+class MigrationSettings(BaseSettings):
+    """マイグレーション専用の接続設定（追加指示 AD-5）。
+
+    アプリの ``DATABASE_URL``（``app_worker``）とは別に、Supabase の ``postgres``
+    ユーザーなど権限を持つ接続で流すための ``MIGRATION_DATABASE_URL`` だけを読む。
+    ``db/migrate.py`` の CLI からだけ使う（``migrate()`` 自体は引数の URL をそのまま
+    使うだけで、環境変数は読まない）。
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="",
+        extra="ignore",
+    )
+
+    migration_database_url: str = Field(min_length=1)
 
 
 def _applied_migrations(conn: psycopg.Connection) -> set[str]:
@@ -21,6 +42,10 @@ def _applied_migrations(conn: psycopg.Connection) -> set[str]:
         )
         """
     )
+    # Supabase は public スキーマの表を anon から REST で読める既定のため、RLS を
+    # 有効にしておく（ポリシーは無し＝app_worker からも読めない。マイグレーション
+    # 自体は所有者（postgres）で流すため、この表を読めなくても支障はない）。
+    conn.execute("ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY")
     rows = conn.execute("SELECT filename FROM schema_migrations").fetchall()
     return {row[0] for row in rows}
 

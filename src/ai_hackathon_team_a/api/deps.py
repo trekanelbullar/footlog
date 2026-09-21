@@ -6,11 +6,15 @@ cron 用ルートは ``require_cron_secret`` だけを使い、互いのヘッ�
 """
 
 import hmac
+from collections.abc import Iterator
 
+import httpx
+import psycopg
 from fastapi import Depends, Header
 
 from ai_hackathon_team_a.api.errors import ApiError
 from ai_hackathon_team_a.auth import AuthenticatedUser, AuthError, verify_access_token
+from ai_hackathon_team_a.db import get_pool
 from ai_hackathon_team_a.worker_settings import WorkerSettings, get_worker_settings
 
 
@@ -59,3 +63,24 @@ def require_cron_secret(
     expected = settings.cron_secret.get_secret_value()
     if not hmac.compare_digest(x_cron_secret, expected):
         raise ApiError(401, "unauthorized", "X-Cron-Secret が一致しません。")
+
+
+def get_db_connection(
+    settings: WorkerSettings = Depends(get_worker_settings),
+) -> Iterator[psycopg.Connection]:
+    """1リクエスト＝1トランザクションの DB 接続を貸し出す（成功でコミット、例外でロールバック）。"""
+
+    with get_pool(settings).connection() as conn:
+        yield conn
+
+
+def get_storage_transport() -> httpx.BaseTransport | None:
+    """Supabase Storage への httpx transport（テストで ``MockTransport`` に差し替える）。"""
+
+    return None
+
+
+def get_auth_admin_transport() -> httpx.BaseTransport | None:
+    """Supabase Auth 管理APIへの httpx transport（テストで ``MockTransport`` に差し替える）。"""
+
+    return None

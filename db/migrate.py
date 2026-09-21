@@ -4,18 +4,19 @@
 
     uv run python db/migrate.py
 
-``DATABASE_URL`` は ``WorkerSettings`` 経由で ``.env`` から読み込む。
+``DATABASE_URL``（app_worker 用、権限が絞られている）は読まない。``MIGRATION_DATABASE_URL``
+（Supabase の ``postgres`` ユーザーなど、権限を持つ接続）だけを ``.env`` から読み込む
+（追加指示 AD-5）。
 """
 
 import sys
 
-from ai_hackathon_team_a.db_migrate import migrate
-from ai_hackathon_team_a.worker_settings import get_worker_settings
+from ai_hackathon_team_a.db_migrate import MigrationSettings, migrate
 
 
 def main() -> int:
-    settings = get_worker_settings()
-    applied = migrate(settings.database_url)
+    settings = MigrationSettings()  # type: ignore[call-arg]
+    applied = migrate(settings.migration_database_url)
     if applied:
         print(f"適用したマイグレーション: {', '.join(applied)}")
     else:

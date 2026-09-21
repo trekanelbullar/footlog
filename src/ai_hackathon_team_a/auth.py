@@ -28,6 +28,9 @@ class AuthenticatedUser:
     """検証済み JWT から取り出した本人の情報。"""
 
     user_id: UUID
+    # Supabase の JWT には通常含まれるが、必須項目ではない（無ければ None）。
+    # project_members.email（設計書 §3）の初期値など、メールアドレスが要る箇所でだけ使う。
+    email: str | None = None
 
 
 @lru_cache(maxsize=8)
@@ -84,4 +87,5 @@ def verify_access_token(
     except (ValueError, TypeError):
         raise AuthError("token sub is not a UUID") from None
 
-    return AuthenticatedUser(user_id=user_id)
+    email = payload.get("email")
+    return AuthenticatedUser(user_id=user_id, email=email if isinstance(email, str) else None)

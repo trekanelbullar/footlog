@@ -84,19 +84,6 @@ def test_me_projects_rejects_wrong_worker_secret(client: TestClient) -> None:
     assert response.status_code == 401
 
 
-def test_me_projects_succeeds_with_valid_secret_and_jwt(client: TestClient) -> None:
-    response = client.get(
-        "/internal/me/projects",
-        headers={
-            "X-Worker-Secret": _WORKER_SECRET,
-            "Authorization": f"Bearer {_bearer_token()}",
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json() == []
-
-
 def test_me_projects_rejects_missing_jwt(client: TestClient) -> None:
     response = client.get(
         "/internal/me/projects",

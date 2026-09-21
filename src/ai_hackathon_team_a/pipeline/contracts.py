@@ -14,6 +14,29 @@ Origin = Literal["human_originated", "ai_verified", "ai_unverified", "document"]
 Speaker = Literal["user", "ai", "unknown"]
 SupportResult = Literal["supported", "partial", "unsupported"]
 
+# 固定見出しのID（設計書 §5.3 (9)、spec E2）。差分モードは5つ、ベースラインモード
+# （出来事の記録が空の初回）は3つ。コードがこの順で見出し名を付ける。
+DIFF_HEADINGS: tuple[str, ...] = (
+    "decisions",
+    "reasons",
+    "rejected_options",
+    "next_steps",
+    "current_status",
+)
+BASELINE_HEADINGS: tuple[str, ...] = ("purpose", "current_state", "direction")
+
+# 見出しIDの日本語名（spec E2 の文言のまま）。
+HEADING_LABELS: dict[str, str] = {
+    "decisions": "今回決定したこと",
+    "reasons": "その理由",
+    "rejected_options": "検討したが採用しなかった選択肢",
+    "next_steps": "次にやること・未解決の論点",
+    "current_status": "現在地",
+    "purpose": "プロジェクトの目的",
+    "current_state": "現時点の状況",
+    "direction": "今後の方向性",
+}
+
 
 class SegmentIn(BaseModel):
     """LLM に渡す1つの区切り（例：``S3-12``）。"""

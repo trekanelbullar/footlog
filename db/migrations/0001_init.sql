@@ -1,8 +1,9 @@
--- decision-trace: 初期スキーマ（設計書 §3、v3）。
+-- decision-trace: 初期スキーマ（設計書 §3、v3。追加指示 AD-4 でポリシー方式に変更）。
 --
--- すべての表で RLS を有効にし、ポリシーは1つも作らない
+-- すべての表で RLS を有効にし、anon・authenticated 向けのポリシーは1つも作らない
 -- （＝ Supabase の匿名キー・ログインユーザーのキーからは何も読めない。spec S3）。
--- worker は専用ロール app_worker（BYPASSRLS）で接続する（§3.3）。
+-- worker は専用ロール app_worker で接続し、各表の app_worker_all ポリシーだけで
+-- 読み書きする（§3.3、BYPASSRLS は付けない）。
 --
 -- auth.users（Supabase Auth）への外部キーはここでは張らない。auth スキーマは
 -- Supabase 側が管理しており、このマイグレーションは素の Postgres（CI・ローカルの
@@ -385,27 +386,59 @@ CREATE TRIGGER trg_agent_questions_guard
     FOR EACH ROW EXECUTE FUNCTION guard_agent_questions();
 
 -- ============================================================
--- app_worker ロール（設計書 §3、§3.2）
+-- app_worker ロール（設計書 §3、§3.2。追加指示 AD-4：ポリシー方式）
 -- ============================================================
--- NOLOGIN で作成する。ログイン用パスワードは運用環境で
---   ALTER ROLE app_worker WITH LOGIN PASSWORD '...';
--- のように別途設定する（このマイグレーションには含めない）。
--- BYPASSRLS を付け、RLS が有効な表にも worker からは通常どおりアクセスできるようにする
--- （RLS が防ぐのは Supabase の匿名キー・ログインユーザーのキー経由のアクセス）。
+-- NOLOGIN で作成する。ログイン用パスワードは運用環境で psql の
+--   \password app_worker
+-- （SQL にパスワードを書かない）で別途設定する（このマイグレーションには含めない）。
+-- BYPASSRLS は付けない（PostgreSQL 16 以降、BYPASSRLS つきロールを作る側にも
+-- BYPASSRLS が要り、スーパーユーザーではない Supabase の postgres ユーザーで
+-- 作れるかが不確かなため）。代わりに、RLS が有効な各表に app_worker 専用の
+-- ポリシー（app_worker_all）を作る（下の「RLS ポリシー」参照）。
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_worker') THEN
-        CREATE ROLE app_worker NOLOGIN BYPASSRLS;
+        CREATE ROLE app_worker NOLOGIN;
     END IF;
 END
 $$;
 
+-- 以前の版（BYPASSRLS つき）で作られたクラスタでも、このマイグレーションを
+-- 再適用すれば BYPASSRLS が外れるようにする（べき等性）。
+ALTER ROLE app_worker NOBYPASSRLS;
+
 COMMENT ON ROLE app_worker IS
-    'worker 専用ロール。NOLOGIN で作成。ログイン用パスワードは運用環境で ALTER ROLE ... WITH LOGIN PASSWORD ... により別途設定する。';
+    'worker 専用ロール。NOLOGIN で作成。ログイン用パスワードは運用環境で psql の \password app_worker により別途設定する。';
 
 GRANT USAGE ON SCHEMA public TO app_worker;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_worker;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_worker;
+
+-- ============================================================
+-- RLS ポリシー（追加指示 AD-4）
+-- ============================================================
+-- RLS を有効にした全表に、app_worker にだけ全行を許すポリシーを作る。
+-- anon・authenticated 向けのポリシーは1つも作らない（Supabase の匿名キー・
+-- ログインユーザーのキーからは引き続き何も読めない）。追記専用の表の
+-- UPDATE・DELETE・TRUNCATE は、ポリシーではなくトリガーと REVOKE で止める
+-- （下のセクションのまま）。表を足すマイグレーションでは、その表にも同じ
+-- ポリシーを必ず作ること。
+CREATE POLICY app_worker_all ON projects FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON project_members FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON project_sources FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON source_versions FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON source_segments FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON runs FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON events FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON reports FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON agent_questions FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON notifications FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON notifications_log FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON source_audit_log FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON model_calls_log FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON daily_cost_alerts FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON daily_costs FOR ALL TO app_worker USING (true) WITH CHECK (true);
+CREATE POLICY app_worker_all ON no_progress_alerts FOR ALL TO app_worker USING (true) WITH CHECK (true);
 
 -- 追記専用の表からは UPDATE・DELETE・TRUNCATE を REVOKE する（トリガーとの二重防御）。
 REVOKE UPDATE, DELETE, TRUNCATE ON

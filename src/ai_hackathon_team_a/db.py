@@ -13,6 +13,11 @@ import psycopg
 from ai_hackathon_team_a.worker_settings import WorkerSettings, get_worker_settings
 
 _DEFAULT_MAX_SIZE = 5
+_REQUIRED_ROLE_NAME = "app_worker"
+
+
+class WrongDatabaseRoleError(RuntimeError):
+    """DATABASE_URL の接続ユーザーが app_worker ではないことを表す（追加指示 AD-5）。"""
 
 
 class ConnectionPool:
@@ -60,6 +65,29 @@ class ConnectionPool:
         with self._idle_lock:
             while self._idle:
                 self._idle.pop().close()
+
+
+def check_connected_as_app_worker(conn: psycopg.Connection) -> None:
+    """DATABASE_URL の接続ユーザーが ``app_worker``（非スーパーユーザー・非BYPASSRLS）か確かめる。
+
+    起動時（``APP_ENV != "test"`` のとき）に呼ぶ（追加指示 AD-5・AD-4）。管理者の
+    接続文字列でうっかり起動していないかをここで止める。接続文字列やパスワードは
+    メッセージにもログにも出さない。
+    """
+
+    row = conn.execute(
+        "SELECT current_user, r.rolsuper, r.rolbypassrls "
+        "FROM pg_roles r WHERE r.rolname = current_user"
+    ).fetchone()
+    current_user_name = row[0] if row else None
+    is_superuser = bool(row[1]) if row else True
+    bypasses_rls = bool(row[2]) if row else True
+
+    if current_user_name != _REQUIRED_ROLE_NAME or is_superuser or bypasses_rls:
+        raise WrongDatabaseRoleError(
+            "DATABASE_URL のユーザーが app_worker ではありません"
+            "（管理者の接続文字列で起動していないか確認してください）。"
+        )
 
 
 _pool: ConnectionPool | None = None

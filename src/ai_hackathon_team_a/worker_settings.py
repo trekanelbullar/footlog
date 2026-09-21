@@ -42,6 +42,9 @@ class WorkerSettings(BaseSettings):
     daily_cost_limit_usd: float = Field(gt=0)
     system_alert_email: str = Field(min_length=1)
     prompts_dir: Path = _DEFAULT_PROMPTS_DIR
+    # "test" のときだけ、起動時の接続ユーザー確認（db.check_connected_as_app_worker）を
+    # 飛ばす（追加指示 AD-5）。未設定を含むそれ以外では必ず確認する。
+    app_env: str | None = None
 
     @model_validator(mode="after")
     def _validate_startup_invariants(self) -> "WorkerSettings":

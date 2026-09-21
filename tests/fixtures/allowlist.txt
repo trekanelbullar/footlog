@@ -1,0 +1,7 @@
+# tests/invariants/test_i6_repo_scan.py が許すテスト用の偽の鍵・値。
+# 実際のサービスに使える鍵ではない（テストのために作った文字列だけをここに書く）。
+
+# .env.example のプレースホルダー
+replace_with_your_api_key
+# README.md の設定例のプレースホルダー
+sk-orca-your-key
