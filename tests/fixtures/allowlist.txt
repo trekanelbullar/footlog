@@ -5,3 +5,6 @@
 replace_with_your_api_key
 # README.md の設定例のプレースホルダー
 sk-orca-your-key
+# web のコードで、変数や環境変数の名前を参照しているだけの箇所（値ではない）
+session.access_token
+process.env.WORKER_SHARED_SECRET

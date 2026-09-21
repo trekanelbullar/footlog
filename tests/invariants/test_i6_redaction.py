@@ -4,14 +4,17 @@ import pytest
 
 from ai_hackathon_team_a.redact import PLACEHOLDER, redact
 
+# 偽の鍵は、実行時に接頭辞と本体を連結して作る。リポジトリには鍵の形の文字列を
+# そのまま置かない（test_i6_repo_scan.py が、Git 管理下のファイルを同じ表で走査するため）。
+_BODY = "abcdefghijklmnopqrstuvwx"
 _REPRESENTATIVE_SECRETS = [
-    "sk-abcdefghijklmnopqrstuvwx",
-    "sk-proj-abcdefghijklmnopqrstuvwx",
-    "AKIAABCDEFGHIJKLMNOP",
-    "ghp_abcdefghijklmnopqrstuvwxyz01",
-    "github_pat_abcdefghijklmnopqrstuvwxyz0123456789",
-    "xoxb-1234567890-abcdefghij",
-    "AIzaSyAbcdefghijklmnopqrstuvwxyz012345",
+    "sk" + "-" + _BODY,
+    "sk" + "-proj-" + _BODY,
+    "AKIA" + "ABCDEFGHIJKLMNOP",
+    "ghp" + "_" + _BODY + "yz01",
+    "github" + "_pat_" + _BODY + "yz0123456789",
+    "xoxb" + "-1234567890-abcdefghij",
+    "AIza" + "SyAbcdefghijklmnopqrstuvwxyz012345",
 ]
 
 
@@ -27,16 +30,13 @@ def test_representative_key_shapes_are_redacted(secret: str) -> None:
 
 
 def test_private_key_block_is_redacted() -> None:
-    block = (
-        "-----BEGIN RSA PRIVATE KEY-----\n"
-        "MIIBOgIBAAJBAK...\nmoreBase64Data==\n"
-        "-----END RSA PRIVATE KEY-----"
-    )
+    marker = "RSA PRIVATE" + " KEY"
+    block = f"-----BEGIN {marker}-----\nMIIBOgIBAAJBAK...\nmoreBase64Data==\n-----END {marker}-----"
     text = f"secret:\n{block}\nend"
 
     redacted, count = redact(text)
 
-    assert "BEGIN RSA PRIVATE KEY" not in redacted
+    assert f"BEGIN {marker}" not in redacted
     assert count == 1
 
 
@@ -53,7 +53,7 @@ def test_key_token_password_assignment_is_redacted(prefix: str) -> None:
 
 
 def test_bearer_token_is_redacted() -> None:
-    text = "Authorization: Bearer abcdefghijklmnopqrstuvwxyz"
+    text = "Authorization: " + "Bearer " + "abcdefghijklmnopqrstuvwxyz"
 
     redacted, count = redact(text)
 

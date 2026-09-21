@@ -27,6 +27,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# ↑ Python のテンプレートの lib/ が web/lib/（Next.js の共有コード）まで無視しないように
+!web/lib/
 lib64/
 parts/
 sdist/
