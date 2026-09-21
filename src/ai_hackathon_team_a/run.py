@@ -367,42 +367,64 @@ def _run_stages(
     _set_step(pool, run_id, "checking")
     _check_deadline(deadline)
 
+    # レポートの中身（組み立て・Judge・図）は、トランザクションの外で作る。LLM の呼び出し
+    # の間に projects の行をロックしていると、呼び出しの記録（model_calls_log）の書き込みが
+    # 外部キーの確認でそのロックを待ち、自分自身を待ち続けてしまうため（2026-09-22 に実際に
+    # 起きた）。保存は最後の短いトランザクションで、版の番号の払い出しと一緒に行う。
     with pool.connection() as conn:
-        # 版の番号は、レポートを保存するこのトランザクションの中で払い出す。組み立て
-        # の途中で失敗しても（例外でロールバックすれば）next_version_no は進まない
-        # （保存しない実行は番号を使わない）。
+        mode_all = _report_mode(conn, project_id, "all")
+        mode_managers = _report_mode(conn, project_id, "managers")
+    built_all = _build_report(
+        project_id=project_id,
+        mode=mode_all,
+        goal_description=goal_description,
+        active_events=active_all,
+        new_event_nos=set(new_event_nos),
+        llm_fn=llm_fn,
+        suspected_injection_labels=suspected_injection_by_partition["all"],
+    )
+    built_managers = (
+        _build_report(
+            project_id=project_id,
+            mode=mode_managers,
+            goal_description=goal_description,
+            active_events=active_managers,
+            new_event_nos=set(new_event_nos),
+            llm_fn=llm_fn,
+            suspected_injection_labels=(
+                suspected_injection_by_partition["all"]
+                | suspected_injection_by_partition["managers"]
+            ),
+        )
+        if build_managers_report
+        else None
+    )
+    _check_deadline(deadline)
+
+    with pool.connection() as conn:
+        # 版の番号は、保存するこのトランザクションの中で払い出す（保存しない実行は番号を
+        # 使わない）。全員向けと管理者向けは同じ番号。
         version_no = _allocate_version_no(conn, project_id)
 
         # レポートを保存する直前に、もう一度 visibility_epoch を確かめる【B-X2】。
         notify_allowed = epoch_unchanged(conn, project_id, start_epoch)
 
-        built_all = _build_and_store_report(
+        stored_all = _store_report(
             conn,
+            built_all,
             project_id=project_id,
             run_id=run_id,
             audience="all",
             version_no=version_no,
-            goal_description=goal_description,
-            active_events=active_all,
-            new_event_nos=set(new_event_nos),
-            llm_fn=llm_fn,
-            suspected_injection_labels=suspected_injection_by_partition["all"],
         )
-        if build_managers_report:
-            _build_and_store_report(
+        if built_managers is not None:
+            _store_report(
                 conn,
+                built_managers,
                 project_id=project_id,
                 run_id=run_id,
                 audience="managers",
                 version_no=version_no,
-                goal_description=goal_description,
-                active_events=active_managers,
-                new_event_nos=set(new_event_nos),
-                llm_fn=llm_fn,
-                suspected_injection_labels=(
-                    suspected_injection_by_partition["all"]
-                    | suspected_injection_by_partition["managers"]
-                ),
             )
         # epoch が変わっていたら、レポートは保存するが needs_rebuild は true のまま
         # にする（次の実行で今の状態から作り直す）。メール・通知を送るかどうかは
@@ -415,16 +437,16 @@ def _run_stages(
 
     _set_step(pool, run_id, "notifying")
 
-    if notify_allowed and built_all.had_new_events:
+    if notify_allowed and stored_all.had_new_events:
         with pool.connection() as conn:
             # 送る直前にもう一度確かめる【B-X2】（保存後にもう一度可視性が変わった場合）。
             if epoch_unchanged(conn, project_id, start_epoch):
                 notify.send_progress_notifications(
                     conn,
                     project_id=project_id,
-                    report_id=built_all.report_id,
+                    report_id=stored_all.report_id,
                     version_no=version_no,
-                    summary_for_mail=built_all.summary_for_mail,
+                    summary_for_mail=stored_all.summary_for_mail,
                     settings=worker_settings,
                     transport=mail_transport,
                 )
@@ -762,26 +784,27 @@ def _fetch_real_active_event_ids(conn: psycopg.Connection, project_id: UUID) -> 
     return {row[0]: row[1] for row in rows}
 
 
+# 番号の払い出しは UPDATE … RETURNING で行う。SELECT … FOR UPDATE と違い、キーでない列の
+# 更新のロック（FOR NO KEY UPDATE）で済むので、ほかの表からの外部キーの確認
+# （FOR KEY SHARE）とぶつからない。
+
+
 def _allocate_event_no(conn: psycopg.Connection, project_id: UUID) -> int:
     row = conn.execute(
-        "SELECT next_event_no FROM projects WHERE id = %s FOR UPDATE", (project_id,)
+        "UPDATE projects SET next_event_no = next_event_no + 1 WHERE id = %s "
+        "RETURNING next_event_no - 1",
+        (project_id,),
     ).fetchone()
-    event_no: int = row[0]
-    conn.execute(
-        "UPDATE projects SET next_event_no = next_event_no + 1 WHERE id = %s", (project_id,)
-    )
-    return event_no
+    return int(row[0])
 
 
 def _allocate_version_no(conn: psycopg.Connection, project_id: UUID) -> int:
     row = conn.execute(
-        "SELECT next_version_no FROM projects WHERE id = %s FOR UPDATE", (project_id,)
+        "UPDATE projects SET next_version_no = next_version_no + 1 WHERE id = %s "
+        "RETURNING next_version_no - 1",
+        (project_id,),
     ).fetchone()
-    version_no: int = row[0]
-    conn.execute(
-        "UPDATE projects SET next_version_no = next_version_no + 1 WHERE id = %s", (project_id,)
-    )
-    return version_no
+    return int(row[0])
 
 
 def _fetch_kinds_for_event_nos(
@@ -893,31 +916,52 @@ def _active_for_audience(
 
 @dataclass(frozen=True)
 class _StoredReport:
-    """``_build_and_store_report`` の結果（設計書 §5.3 (12) の通知の判定に使う）。"""
+    """``_store_report`` の結果（設計書 §5.3 (12) の通知の判定に使う）。"""
 
     report_id: UUID
     had_new_events: bool
     summary_for_mail: str
 
 
-def _build_and_store_report(
-    conn: psycopg.Connection,
+def _report_mode(
+    conn: psycopg.Connection, project_id: UUID, audience: Audience
+) -> Literal["diff", "baseline"]:
+    existing = conn.execute(
+        "SELECT 1 FROM reports WHERE project_id = %s AND audience = %s LIMIT 1",
+        (project_id, audience),
+    ).fetchone()
+    return "baseline" if existing is None else "diff"
+
+
+@dataclass(frozen=True)
+class _BuiltReport:
+    """保存する前のレポートの中身（``_build_report`` の結果）。"""
+
+    mode: Literal["diff", "baseline"]
+    judge_status: str
+    body_markdown: str
+    mermaid_dsl: str | None
+    evidence_catalog: dict
+    event_nos: list[int]
+    cited_labels: list[str]
+    input_segment_ids: list[str]
+    flags: dict[str, object]
+    summary_for_mail: str
+    had_new_events: bool
+
+
+def _build_report(
     *,
     project_id: UUID,
-    run_id: UUID,
-    audience: Audience,
-    version_no: int,
+    mode: Literal["diff", "baseline"],
     goal_description: str,
     active_events: list[_EventRow],
     new_event_nos: set[int],
     llm_fn,
     suspected_injection_labels: set[str],
-) -> _StoredReport:
-    existing_reports = conn.execute(
-        "SELECT 1 FROM reports WHERE project_id = %s AND audience = %s LIMIT 1",
-        (project_id, audience),
-    ).fetchone()
-    mode: Literal["diff", "baseline"] = "baseline" if existing_reports is None else "diff"
+) -> _BuiltReport:
+    """レポートの中身を作る（LLM を呼ぶ）。DB には触れない。"""
+
     headings = _BASELINE_HEADINGS if mode == "baseline" else DIFF_HEADINGS
 
     event_summaries = [_to_event_summary(e) for e in active_events]
@@ -974,6 +1018,32 @@ def _build_and_store_report(
         "unverified_ai_count": rendered.unverified_ai_count,
     }
 
+    return _BuiltReport(
+        mode=mode,
+        judge_status=result.judge_status,
+        body_markdown=rendered.body_markdown,
+        mermaid_dsl=mermaid_dsl,
+        evidence_catalog=rendered.evidence_catalog,
+        event_nos=[e.event_no for e in active_events],
+        cited_labels=cited_labels,
+        input_segment_ids=input_segment_ids,
+        flags=flags,
+        summary_for_mail=result.output.summary_for_mail,
+        had_new_events=bool(audience_new_event_nos),
+    )
+
+
+def _store_report(
+    conn: psycopg.Connection,
+    built: _BuiltReport,
+    *,
+    project_id: UUID,
+    run_id: UUID,
+    audience: Audience,
+    version_no: int,
+) -> _StoredReport:
+    """できた中身を保存する（呼び出し側のトランザクションの中で。LLM は呼ばない）。"""
+
     row = conn.execute(
         """
         INSERT INTO reports
@@ -988,23 +1058,23 @@ def _build_and_store_report(
             run_id,
             version_no,
             audience,
-            mode,
-            result.judge_status,
-            rendered.body_markdown,
-            mermaid_dsl,
-            _to_jsonb(rendered.evidence_catalog),
-            [e.event_no for e in active_events],
-            cited_labels,
-            input_segment_ids,
-            _to_jsonb(flags),
-            result.output.summary_for_mail,
+            built.mode,
+            built.judge_status,
+            built.body_markdown,
+            built.mermaid_dsl,
+            _to_jsonb(built.evidence_catalog),
+            built.event_nos,
+            built.cited_labels,
+            built.input_segment_ids,
+            _to_jsonb(built.flags),
+            built.summary_for_mail,
         ),
     ).fetchone()
 
     return _StoredReport(
         report_id=row[0],
-        had_new_events=bool(audience_new_event_nos),
-        summary_for_mail=result.output.summary_for_mail,
+        had_new_events=built.had_new_events,
+        summary_for_mail=built.summary_for_mail,
     )
 
 

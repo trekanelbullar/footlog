@@ -5,8 +5,10 @@ import json
 from uuid import UUID
 
 import psycopg
+from psycopg import conninfo
 
 import ai_hackathon_team_a.run as run_module
+from ai_hackathon_team_a.clients.orca import Completion
 from ai_hackathon_team_a.config import Settings
 from ai_hackathon_team_a.db import ConnectionPool
 from ai_hackathon_team_a.llm import LlmResult, call_llm
@@ -325,3 +327,58 @@ def test_retrying_the_same_run_id_returns_the_stored_outcome(
             "SELECT COUNT(*) FROM reports WHERE project_id = %s", (project_id,)
         ).fetchone()[0]
     assert report_count == 1  # 二重送信で版が増えていない
+
+
+class _SequencedOrcaClient:
+    """SDK の部分だけの偽物。段階の順（抽出→裏付け→組み立て→Judge）に応答を返す。"""
+
+    def __init__(self, texts: list[str]) -> None:
+        self._texts = list(texts)
+
+    def complete(self, *args: object, model: str, **kwargs: object) -> Completion:
+        return Completion(
+            text=self._texts.pop(0), tool_calls=None, input_tokens=10, output_tokens=10, model=model
+        )
+
+
+def test_report_is_created_through_the_real_call_llm_path(
+    migrated_database_url: str, worker_settings
+) -> None:
+    """本物の call_llm（予約・精算・呼び出しの記録）を通しても、実行が最後まで進むこと。
+
+    2026-09-22、レポートの保存のトランザクションが projects の行をロックしたまま LLM を
+    呼び、呼び出しの記録（model_calls_log の外部キーの確認）が自分のロックを待ち続けた。
+    偽の llm_call では呼び出しの記録を書かないため、この経路でしか再現しない。
+    再発したときにテストが止まったままにならないよう、ロック待ちに上限を付ける。
+    """
+
+    dsn = conninfo.make_conninfo(migrated_database_url, options="-c lock_timeout=5000")
+    project_id = _setup_project_with_segment(dsn)
+    run_id = _insert_queued_run(dsn, project_id)
+    pool = ConnectionPool(dsn)
+    worker_settings = worker_settings.model_copy(update={"database_url": dsn})
+    llm_call = functools.partial(
+        call_llm,
+        orca_client=_SequencedOrcaClient(
+            [_FAKE_EXTRACT, _FAKE_SUPPORT, _FAKE_ASSEMBLE, _FAKE_JUDGE]
+        ),
+        settings=Settings(_env_file=None, api_key="test-key"),
+        worker_settings=worker_settings,
+        pool=pool,
+        alert_fn=lambda *_a, **_k: None,
+    )
+
+    outcome = run_module.execute_run(
+        run_id, worker_settings=worker_settings, pool=pool, llm_call=llm_call
+    )
+
+    assert outcome.outcome == "report_created", outcome.error_message
+    assert outcome.version_no == 1
+    with psycopg.connect(migrated_database_url) as conn:
+        stages = [
+            row[0]
+            for row in conn.execute(
+                "SELECT stage FROM model_calls_log WHERE run_id = %s ORDER BY created_at", (run_id,)
+            ).fetchall()
+        ]
+    assert stages == ["EXTRACT", "SUPPORT", "ASSEMBLE", "JUDGE"]
