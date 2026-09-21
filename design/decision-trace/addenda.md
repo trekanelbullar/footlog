@@ -27,3 +27,17 @@
 - DB を使うテストは、手元では Homebrew の PostgreSQL 16 に作った `decision_trace_test` で流す（`TEST_DATABASE_URL=postgresql://localhost/decision_trace_test`）。
 - `.env` の `DATABASE_URL`（Supabase）は、テストでは**絶対に使わない**。テストの接続先は `TEST_DATABASE_URL` だけから取り、ホスト名が `localhost`・`127.0.0.1`・`postgres`（CI のサービスコンテナ）のどれかでなければ、テストを始めずに失敗させる。
 - CI のサービスコンテナも、手元と同じ PostgreSQL 16 にする。
+
+## AD-4 app_worker の RLS の扱い：ポリシー方式（2026-09-21、ユーザー決定。当初の BYPASSRLS 案は取り消し）
+
+- 全表で RLS を有効にする（design.md §3）。そのうえで、各表に `app_worker` にだけ全行を許すポリシーを作る：`CREATE POLICY app_worker_all ON <表> TO app_worker USING (true) WITH CHECK (true)`。`anon`・`authenticated` 向けのポリシーは作らないので、Supabase の匿名キーとログインユーザーのキーからは引き続き何も読めない。
+- `app_worker` に BYPASSRLS は**付けない**。理由：PostgreSQL 16 以降は BYPASSRLS つきのロールを作る側も BYPASSRLS を持っている必要があり、スーパーユーザーではない Supabase の `postgres` ユーザーで作れるかが不確か。ポリシー方式なら特別な権限が要らず、手元と Supabase で同じように動く。
+- ポリシーは、どの操作に効くかを1つのポリシー（`FOR ALL`）で決める。追記専用の表の UPDATE・DELETE・TRUNCATE は、ポリシーではなく、トリガーと REVOKE で止める（design.md §3.2 のまま）。
+- 表を足すマイグレーションでは、その表にも同じポリシーを必ず作る。
+- 起動時の確認（AD-5）では、`app_worker` が BYPASSRLS を持っていないことも確かめる。
+
+## AD-5 起動時の接続ユーザーの確認と、マイグレーション用の接続の分離（2026-09-21）
+
+- worker は起動時に、今つないでいる DB のユーザーを確かめる。`current_user` が `app_worker` でない、またはスーパーユーザーである場合は、起動しない（管理者の接続文字列で誤って起動したことに気づくため）。
+- テスト環境だけは除く。`APP_ENV=test` のときだけ確認を飛ばし、それ以外（未設定を含む）は必ず確認する（設定を忘れたときに、確認が働く側に倒す）。
+- マイグレーションは `MIGRATION_DATABASE_URL`（Supabase の `postgres` ユーザー）で流し、アプリの `DATABASE_URL`（`app_worker`）とは分ける。マイグレーションのコマンドは `DATABASE_URL` を読まない。
