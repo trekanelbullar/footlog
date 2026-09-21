@@ -13,6 +13,7 @@
   "openIssueIds": [],
   "requiredReads": [
     "design.md",
+    "addenda.md",
     "ledger.md"
   ],
   "nextAction": "§9 の1段目（土台と契約）",
@@ -22,7 +23,8 @@
     "P-1": "追わない（既知の制限として README に明記）",
     "specDeviations": "設計書の通りで了承",
     "dependencies": "§13 の通りで了承（psycopg のまま）",
-    "U5-U12": "返事が無ければ既定値で進める（2026-09-21 ユーザー）"
+    "U5-U12": "既定値で確定（addenda.md AD-1）",
+    "addenda": "承認後の追加指示は addenda.md（AD-1〜AD-3）。design.md は承認時のまま"
   },
   "delegation": {
     "実装(worker)": "claude/sonnet サブエージェント",
