@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Button from "@/components/ui/Button";
+import { TextAreaField } from "@/components/ui/Field";
+import { Toast } from "@/components/ui/Feedback";
 
 export default function QuestionAnswerForm({ qid }: { qid: string }) {
   const [text, setText] = useState("");
   const [done, setDone] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,31 +21,26 @@ export default function QuestionAnswerForm({ qid }: { qid: string }) {
       body: JSON.stringify({ text }),
     }).catch(() => {});
     setDone(true);
+    setToast("回答を受け付けました。反映には少し時間がかかります。");
   }
 
   if (done) {
-    return (
-      <p className="rounded bg-green-50 p-3 text-sm text-green-700">
-        回答を受け付けました。反映には少し時間がかかります。
-      </p>
-    );
+    return <Toast message={toast} onDone={() => setToast(null)} />;
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <textarea
-        className="rounded border px-3 py-2 text-sm"
+      <TextAreaField
+        label="回答"
+        hideLabel
         rows={4}
         value={text}
         onChange={(e) => setText(e.target.value)}
         required
       />
-      <button
-        type="submit"
-        className="w-fit rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-      >
+      <Button type="submit" variant="primary" className="w-fit">
         回答する
-      </button>
+      </Button>
     </form>
   );
 }

@@ -21,8 +21,12 @@
 
 /* 記事の体裁で、脚注・図のノードから飛んだ先を一瞬だけ示す（凝った動きはしない）。 */
 @keyframes flash-mark {
-  from { background-color: #f6e3c7; }
-  to { background-color: transparent; }
+  from {
+    background-color: #f6e3c7;
+  }
+  to {
+    background-color: transparent;
+  }
 }
 .flash {
   animation: flash-mark 1.6s ease-out;

@@ -2,8 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/components/ui/Button";
+import { TextField, TextAreaField } from "@/components/ui/Field";
+import { InlineError } from "@/components/ui/Feedback";
 
-export default function CreateProjectForm() {
+export default function CreateProjectForm({
+  onDone,
+}: {
+  onDone?: (message: string) => void;
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
@@ -32,6 +39,7 @@ export default function CreateProjectForm() {
         setError(data.message ?? "作成に失敗しました。");
         return;
       }
+      onDone?.(`${name} を作成しました。`);
       router.push(`/projects/${data.project_id}`);
       router.refresh();
     } catch {
@@ -42,37 +50,31 @@ export default function CreateProjectForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-lg flex-col gap-3 rounded border bg-white p-4">
-      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
-      <label className="flex flex-col gap-1 text-sm">
-        プロジェクト名
-        <input
-          className="rounded border px-3 py-2"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        目的の説明
-        <textarea
-          className="rounded border px-3 py-2"
-          rows={3}
-          value={goal}
-          onChange={(e) => setGoal(e.target.value)}
-          required
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        無進捗としきい値（時間）
-        <input
-          type="number"
-          min={1}
-          className="rounded border px-3 py-2"
-          value={thresholdHours}
-          onChange={(e) => setThresholdHours(e.target.value)}
-        />
-      </label>
+    <form
+      onSubmit={handleSubmit}
+      className="flex max-w-lg flex-col gap-3 rounded border bg-white p-4"
+    >
+      <InlineError>{error}</InlineError>
+      <TextField
+        label="プロジェクト名"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <TextAreaField
+        label="目的の説明"
+        rows={3}
+        value={goal}
+        onChange={(e) => setGoal(e.target.value)}
+        required
+      />
+      <TextField
+        label="無進捗としきい値（時間）"
+        type="number"
+        min={1}
+        value={thresholdHours}
+        onChange={(e) => setThresholdHours(e.target.value)}
+      />
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -81,13 +83,14 @@ export default function CreateProjectForm() {
         />
         無進捗の判定で土日を除く
       </label>
-      <button
+      <Button
         type="submit"
+        variant="primary"
         disabled={submitting}
-        className="mt-2 w-fit rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+        className="mt-2 w-fit"
       >
         作成する
-      </button>
+      </Button>
     </form>
   );
 }

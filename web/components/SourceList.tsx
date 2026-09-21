@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ExcludeReason, SourceSummary } from "@/lib/worker-types";
+import Button from "@/components/ui/Button";
+import { SelectField } from "@/components/ui/Field";
+import { InlineError } from "@/components/ui/Feedback";
 
 const TYPE_LABEL: Record<string, string> = {
   file: "ファイル",
@@ -103,105 +106,104 @@ export default function SourceList({
   }
 
   if (initialSources.length === 0) {
-    return <p className="text-sm text-gray-500">まだソースがありません。</p>;
+    return <p className="text-sm text-gray-500">まだ資料がありません。</p>;
   }
+
+  const reasonLabel = (r: string | null) =>
+    REASON_OPTIONS.find((o) => o.value === r)?.label ?? "その他";
 
   return (
     <div className="flex flex-col gap-3">
-      {error && (
-        <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>
-      )}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="text-gray-500">
-            <tr>
-              <th className="py-1 pr-2">番号</th>
-              <th className="py-1 pr-2">種類</th>
-              <th className="py-1 pr-2">名前</th>
-              <th className="py-1 pr-2">登録者</th>
-              <th className="py-1 pr-2">公開範囲</th>
-              <th className="py-1 pr-2">除外</th>
-              <th className="py-1 pr-2">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {initialSources.map((s) => (
-              <tr key={s.source_id} className="border-t">
-                <td className="py-2 pr-2">S{s.source_no}</td>
-                <td className="py-2 pr-2">{TYPE_LABEL[s.type] ?? s.type}</td>
-                <td className="py-2 pr-2">{s.filename ?? "（会話）"}</td>
-                <td className="py-2 pr-2">
-                  {s.uploaded_by === myUserId ? "自分" : "他のメンバー"}
-                </td>
-                <td className="py-2 pr-2">
-                  {s.visibility === "all" ? "全員" : "マネージャーのみ"}
-                </td>
-                <td className="py-2 pr-2">
+      <InlineError>{error}</InlineError>
+      <ul className="divide-y divide-gray-200 rounded-md border border-gray-200">
+        {initialSources.map((s) => {
+          const canExclude = isManager || s.uploaded_by === myUserId;
+          const canVisibility =
+            isManager || (s.uploaded_by === myUserId && s.visibility === "all");
+          return (
+            <li
+              key={s.source_id}
+              className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-gray-900">
+                  S{s.source_no}　{s.filename ?? "会話"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {TYPE_LABEL[s.type] ?? s.type} ・{" "}
+                  {s.uploaded_by === myUserId ? "自分" : "他のメンバー"}が登録
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-1 sm:justify-end">
+                {canExclude && !s.is_excluded && (
+                  <SelectField
+                    label={`S${s.source_no} を除外する理由`}
+                    hideLabel
+                    className="w-40"
+                    value={reasonFor(s.source_id)}
+                    onChange={(e) =>
+                      setReasons((r) => ({
+                        ...r,
+                        [s.source_id]: e.target.value as ExcludeReason,
+                      }))
+                    }
+                  >
+                    {REASON_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </SelectField>
+                )}
+                {canExclude && (
+                  <Button
+                    variant="ghost"
+                    disabled={busy === s.source_id}
+                    onClick={() => toggleExclusion(s)}
+                  >
+                    {s.is_excluded ? "除外を戻す" : "除外する"}
+                  </Button>
+                )}
+                {canVisibility && (
+                  <Button
+                    variant="ghost"
+                    disabled={busy === s.source_id}
+                    onClick={() => toggleVisibility(s)}
+                  >
+                    {s.visibility === "all"
+                      ? "マネージャー限定に"
+                      : "全員公開に"}
+                  </Button>
+                )}
+                {s.type === "file" && (
+                  <Button
+                    variant="ghost"
+                    disabled={busy === s.source_id}
+                    onClick={() => openDownload(s)}
+                  >
+                    ダウンロード
+                  </Button>
+                )}
+                <span
+                  className={`ml-1 shrink-0 rounded-full border px-2 py-0.5 text-xs ${
+                    s.is_excluded
+                      ? "border-gray-300 bg-gray-100 text-gray-500"
+                      : s.visibility === "all"
+                        ? "border-gray-300 text-gray-700"
+                        : "border-amber-300 bg-amber-50 text-amber-800"
+                  }`}
+                >
                   {s.is_excluded
-                    ? `除外中（${s.exclude_reason ?? "-"}）`
-                    : "なし"}
-                </td>
-                <td className="py-2 pr-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {(isManager || s.uploaded_by === myUserId) && (
-                      <select
-                        className="rounded border px-1 py-0.5 text-xs"
-                        value={reasonFor(s.source_id)}
-                        onChange={(e) =>
-                          setReasons((r) => ({
-                            ...r,
-                            [s.source_id]: e.target.value as ExcludeReason,
-                          }))
-                        }
-                      >
-                        {REASON_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    {(isManager ||
-                      (s.uploaded_by === myUserId &&
-                        s.visibility === "all")) && (
-                      <button
-                        type="button"
-                        disabled={busy === s.source_id}
-                        onClick={() => toggleVisibility(s)}
-                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {s.visibility === "all"
-                          ? "マネージャー限定に"
-                          : "全員公開に"}
-                      </button>
-                    )}
-                    {(isManager || s.uploaded_by === myUserId) && (
-                      <button
-                        type="button"
-                        disabled={busy === s.source_id}
-                        onClick={() => toggleExclusion(s)}
-                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        {s.is_excluded ? "除外を戻す" : "除外する"}
-                      </button>
-                    )}
-                    {s.type === "file" && (
-                      <button
-                        type="button"
-                        disabled={busy === s.source_id}
-                        onClick={() => openDownload(s)}
-                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        ダウンロード
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    ? `除外中・${reasonLabel(s.exclude_reason)}`
+                    : s.visibility === "all"
+                      ? "全員"
+                      : "マネージャーのみ"}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

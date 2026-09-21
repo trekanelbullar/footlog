@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { RunOutcome, RunStep } from "@/lib/worker-types";
+import Button, { type ButtonVariant } from "@/components/ui/Button";
+import { Toast } from "@/components/ui/Feedback";
 
-// 実行の工程（worker の step）を、記事を組む4つの工程に読み替える。
+// 実行の工程（worker の step）を、4つの工程に読み替える。
 const STAGES = ["取り込み", "抽出", "組み立て", "検査"] as const;
 const STAGE_OF_STEP: Record<RunStep, number> = {
   extracting: 1,
@@ -23,7 +25,14 @@ const OUTCOME_LABEL: Record<RunOutcome, string> = {
   failed: "実行に失敗しました。",
 };
 
-export default function RunPanel({ pid }: { pid: string }) {
+/** 「今すぐ確認」：押すと、ボタンの中に工程を出しながら実行し、終わったら新しい版を開く。 */
+export default function RunPanel({
+  pid,
+  variant = "primary",
+}: {
+  pid: string;
+  variant?: ButtonVariant;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "running" | "done">("idle");
   const [step, setStep] = useState<RunStep | null>(null);
@@ -60,6 +69,9 @@ export default function RunPanel({ pid }: { pid: string }) {
         setVersionNo(data.version_no ?? null);
         setStatus("done");
         stopPolling();
+        if (data.outcome === "report_created" && data.version_no) {
+          router.push(`/projects/${pid}/reports/${data.version_no}`);
+        }
         router.refresh();
       }
     } catch {
@@ -98,60 +110,65 @@ export default function RunPanel({ pid }: { pid: string }) {
     }
   }
 
-  // 実行中は、記事を組んでいる途中のように4つの工程で進み具合を見せる。
   const stageIndex = step ? STAGE_OF_STEP[step] : 0;
+  const failed = outcome === "failed" || outcome === "cost_limited";
 
   return (
-    <section className="border-y-2 border-ink bg-paper px-5 py-6 font-sans-jp text-ink">
-      <p className="text-[11px] font-bold tracking-[0.25em] text-accent">
-        PRESS
-      </p>
-      <h2 className="mt-1 mb-4 font-serif-jp text-xl font-black">今すぐ確認</h2>
-      {error && (
-        <p className="mb-3 border-l-4 border-accent pl-3 text-sm text-accent">
-          {error}
-        </p>
-      )}
-      <button
-        type="button"
+    <div className="relative">
+      <Button
+        variant={variant}
         onClick={handleRunNow}
         disabled={status === "running"}
-        className="border-2 border-ink bg-ink px-5 py-2 text-sm font-bold text-paper hover:bg-paper hover:text-ink disabled:opacity-50"
       >
-        {status === "running" ? "組版中…" : "今すぐ確認する"}
-      </button>
+        {status === "running" ? (
+          <>
+            <span className="inline-block size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            {STAGES[stageIndex]}中…
+          </>
+        ) : (
+          <>
+            <span aria-hidden>↻</span>
+            <span>
+              <span className="hidden sm:inline">今すぐ</span>確認
+            </span>
+          </>
+        )}
+      </Button>
       {status === "running" && (
-        <ol className="mt-5 grid grid-cols-4 border-t border-ink text-xs">
+        <ol
+          className="absolute top-full right-0 mt-1 flex w-56 gap-1"
+          aria-label="進み具合"
+        >
           {STAGES.map((label, i) => (
-            <li
-              key={label}
-              className={`border-t-4 pt-2 pr-2 ${
-                i < stageIndex
-                  ? "border-ink text-ink"
-                  : i === stageIndex
-                    ? "border-accent font-bold text-accent"
-                    : "border-transparent text-[#9a9486]"
-              }`}
-            >
-              {String(i + 1).padStart(2, "0")} {label}
-              {i === stageIndex && <span className="ml-1">…</span>}
+            <li key={label} className="flex-1">
+              <span
+                className={`block h-1 rounded ${i <= stageIndex ? "bg-gray-900" : "bg-gray-200"}`}
+              />
+              <span
+                className={`mt-0.5 block text-[10px] ${i === stageIndex ? "font-semibold text-gray-900" : "text-gray-400"}`}
+              >
+                {label}
+              </span>
             </li>
           ))}
         </ol>
       )}
-      {status === "done" && outcome && (
-        <div className="mt-4 text-sm">
-          <p>{OUTCOME_LABEL[outcome]}</p>
-          {versionNo && (
-            <a
-              href={`/projects/${pid}/reports/${versionNo}`}
-              className="font-bold text-accent underline underline-offset-2"
-            >
-              第{versionNo}版の記事を読む
-            </a>
-          )}
-        </div>
+      {(error || (status === "done" && failed)) && (
+        <p
+          role="alert"
+          className="absolute top-full right-0 mt-1 w-64 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"
+        >
+          {error ?? (outcome ? OUTCOME_LABEL[outcome] : "")}
+        </p>
       )}
-    </section>
+      <Toast
+        message={
+          status === "done" && outcome && !failed
+            ? OUTCOME_LABEL[outcome] + (versionNo ? `（第${versionNo}版）` : "")
+            : null
+        }
+        onDone={() => setStatus("idle")}
+      />
+    </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { formatJst } from "@/lib/format";
+import { TextField } from "@/components/ui/Field";
+import { InlineError } from "@/components/ui/Feedback";
 import type { EventSearchResult } from "@/lib/worker-types";
 
 // AD-12：出来事の検索（W25）。レポートの画面に置く検索窓。
@@ -38,7 +40,7 @@ export default function EventSearchPanel({ pid }: { pid: string }) {
         try {
           const res = await fetch(
             `/api/projects/${pid}/events/search?q=${encodeURIComponent(trimmedQuery)}`,
-            { signal: controller.signal }
+            { signal: controller.signal },
           );
           const data = await res.json();
           if (!res.ok) {
@@ -63,79 +65,84 @@ export default function EventSearchPanel({ pid }: { pid: string }) {
   }, [pid, trimmedQuery, tooShort]);
 
   return (
-    <section className="rounded border bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold">出来事を検索</h2>
-      <input
+    <div className="w-full sm:w-80">
+      <TextField
+        label="出来事を検索"
+        hideLabel
         type="search"
-        className="mb-3 w-full rounded border px-3 py-2 text-sm"
-        placeholder="要約・理由の一部を入力（2文字以上）"
+        placeholder="出来事を検索（2文字以上）"
         value={query}
         onChange={(e) => {
           setSelected(null);
           setQuery(e.target.value);
         }}
       />
-
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <div>
-          {!tooShort && status === "loading" && (
-            <p className="text-sm text-gray-500">検索しています…</p>
-          )}
-          {!tooShort && status === "error" && (
-            <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>
-          )}
-          {!tooShort && status === "ok" && results.length === 0 && (
-            <p className="text-sm text-gray-500">見つかりませんでした。</p>
-          )}
-          {!tooShort && status === "ok" && results.length > 0 && (
-            <ul className="flex flex-col gap-2">
-              {results.map((r) => (
-                <li key={r.event_no}>
-                  <button
-                    type="button"
-                    onClick={() => setSelected(r)}
-                    className="w-full rounded border px-3 py-2 text-left text-sm hover:bg-gray-50"
-                  >
-                    <span className="text-gray-500">{KIND_LABEL[r.kind] ?? r.kind}</span>
-                    {" ・ "}
-                    <span className="text-gray-500">{formatJst(r.occurred_at)}</span>
-                    {" ・ "}
-                    <span>{r.summary}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div>
-          {selected ? (
-            <div className="rounded border bg-gray-50 p-3">
-              <p className="mb-2 text-xs text-gray-500">
-                {KIND_LABEL[selected.kind] ?? selected.kind} ・ {formatJst(selected.occurred_at)}
+      {!tooShort && (
+        <div className="relative">
+          <div className="absolute top-1 right-0 z-30 w-full max-w-[640px] rounded-md border border-gray-200 bg-white sm:w-[32rem]">
+            {status === "loading" && (
+              <p className="px-3 py-3 text-sm text-gray-500">検索しています…</p>
+            )}
+            {status === "error" && (
+              <div className="p-2">
+                <InlineError>{error}</InlineError>
+              </div>
+            )}
+            {status === "ok" && results.length === 0 && (
+              <p className="px-3 py-3 text-sm text-gray-500">
+                見つかりませんでした。
               </p>
-              <p className="mb-2 text-sm">{selected.summary}</p>
-              {selected.evidence.length === 0 ? (
-                <p className="text-sm text-gray-500">根拠が見つかりませんでした。</p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {selected.evidence.map((entry, i) => (
-                    <li key={`${entry.label}-${i}`} className="text-sm">
-                      <p className="mb-1 text-xs text-gray-500">{entry.label}</p>
-                      {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
-                      <p className="whitespace-pre-wrap break-words rounded bg-white p-2 font-mono text-xs">
-                        {entry.text}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">結果を選ぶと根拠の原文がここに表示されます。</p>
-          )}
+            )}
+            {status === "ok" && results.length > 0 && (
+              <ul className="max-h-80 divide-y divide-gray-100 overflow-y-auto">
+                {results.map((r) => (
+                  <li key={r.event_no}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelected(
+                          selected?.event_no === r.event_no ? null : r,
+                        )
+                      }
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-none"
+                    >
+                      <span className="text-xs text-gray-500">
+                        {KIND_LABEL[r.kind] ?? r.kind} ・{" "}
+                        {formatJst(r.occurred_at)}
+                      </span>
+                      <span className="block text-gray-900">{r.summary}</span>
+                    </button>
+                    {selected?.event_no === r.event_no && (
+                      <div className="bg-gray-50 px-3 pb-3">
+                        {selected.evidence.length === 0 ? (
+                          <p className="text-sm text-gray-500">
+                            根拠が見つかりませんでした。
+                          </p>
+                        ) : (
+                          selected.evidence.map((entry, i) => (
+                            <div
+                              key={`${entry.label}-${i}`}
+                              className="pt-2 text-sm"
+                            >
+                              <p className="text-xs text-gray-500">
+                                {entry.label}
+                              </p>
+                              {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
+                              <p className="whitespace-pre-wrap break-words text-gray-900">
+                                {entry.text}
+                              </p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 }

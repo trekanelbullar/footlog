@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { NotificationItem } from "@/lib/worker-types";
 import { formatJst } from "@/lib/format";
+import Button from "@/components/ui/Button";
+import { InlineError } from "@/components/ui/Feedback";
 
 const KIND_LABEL: Record<string, string> = {
   question: "質問",
@@ -50,30 +53,29 @@ export default function NotificationList({
 
   return (
     <div className="flex flex-col gap-2">
-      {error && (
-        <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>
-      )}
+      <InlineError>{error}</InlineError>
       <ul className="flex flex-col gap-2">
         {initialNotifications.map((n) => (
           <li
             key={n.id}
-            className={`rounded border p-3 ${n.read_at ? "bg-white" : "bg-blue-50"}`}
+            className={`flex items-center justify-between gap-3 rounded border p-3 ${n.read_at ? "bg-white" : "bg-blue-50"}`}
           >
-            <a
-              href={href(n)}
-              onClick={() => markRead(n)}
-              className="flex items-center justify-between"
-            >
-              <span>
-                <span className="mr-2 text-xs text-gray-500">
-                  [{KIND_LABEL[n.kind] ?? n.kind}]
-                </span>
-                {n.title}
+            <Link href={href(n)} className="min-w-0 flex-1">
+              <span className="mr-2 text-xs text-gray-500">
+                [{KIND_LABEL[n.kind] ?? n.kind}]
               </span>
+              {n.title}
+            </Link>
+            <div className="flex shrink-0 items-center gap-2">
               <span className="text-xs text-gray-400">
                 {formatJst(n.created_at)}
               </span>
-            </a>
+              {!n.read_at && (
+                <Button variant="ghost" onClick={() => markRead(n)}>
+                  既読にする
+                </Button>
+              )}
+            </div>
           </li>
         ))}
       </ul>

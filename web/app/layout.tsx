@@ -48,9 +48,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       lang="ja"
       className={`${geistSans.variable} ${geistMono.variable} ${notoSerifJp.variable} ${notoSansJp.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
-        <header className="border-b bg-white">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <body className="flex min-h-full flex-col bg-white font-sans-jp text-gray-900">
+        <header className="border-b border-gray-200 bg-white">
+          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
             <Link href="/projects" className="whitespace-nowrap font-semibold">
               決定ログ
             </Link>
@@ -76,7 +76,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             )}
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
           {children}
         </main>
       </body>

@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectField } from "@/components/ui/Field";
 import { useRouter } from "next/navigation";
 import type { ReportSummary } from "@/lib/worker-types";
 
@@ -15,21 +16,23 @@ export default function VersionSwitcher({
   const router = useRouter();
 
   return (
-    <label className="flex items-center gap-2 font-sans-jp text-xs tracking-wide text-[#6b655a]">
-      版
-      <select
-        className="border-b border-ink bg-transparent px-1 py-0.5 text-ink"
-        value={currentVersion}
-        onChange={(e) => router.push(`/projects/${pid}/reports/${e.target.value}`)}
-      >
-        {reports.map((r) => (
+    <SelectField
+      label="版"
+      hideLabel
+      className="w-full sm:w-56"
+      value={currentVersion}
+      onChange={(e) =>
+        router.push(`/projects/${pid}/reports/${e.target.value}`)
+      }
+    >
+      {[...reports]
+        .sort((a, b) => b.version_no - a.version_no)
+        .map((r) => (
           <option key={r.version_no} value={r.version_no}>
-            版{r.version_no}
-            {r.withheld ? "（表示不可）" : ""}
+            第{r.version_no}版{r.withheld ? "（表示不可）" : ""}
             {r.audience === "managers" ? "・管理者向け" : ""}
           </option>
         ))}
-      </select>
-    </label>
+    </SelectField>
   );
 }

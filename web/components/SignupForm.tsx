@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Button from "@/components/ui/Button";
+import { TextField } from "@/components/ui/Field";
+import { InlineError } from "@/components/ui/Feedback";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -35,35 +38,30 @@ export default function SignupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
-      <label className="flex flex-col gap-1 text-sm">
-        メールアドレス
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="rounded border px-3 py-2"
-        />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        パスワード
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          className="rounded border px-3 py-2"
-        />
-      </label>
-      <button
+      <InlineError>{error}</InlineError>
+      <TextField
+        label="メールアドレス"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <TextField
+        label="パスワード"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        minLength={8}
+      />
+      <Button
         type="submit"
+        variant="primary"
         disabled={submitting}
-        className="mt-2 rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+        className="mt-2 w-fit"
       >
         サインアップ
-      </button>
+      </Button>
     </form>
   );
 }
