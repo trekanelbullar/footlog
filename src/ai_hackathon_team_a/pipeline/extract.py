@@ -18,6 +18,7 @@ from ai_hackathon_team_a.pipeline.contracts import (
     LlmFn,
     Origin,
 )
+from ai_hackathon_team_a.pipeline.injection import detect_injection, merge_labels
 from ai_hackathon_team_a.prompts import get_prompts, render
 
 _VALID_KINDS: frozenset[str] = frozenset(get_args(EventKind))
@@ -34,7 +35,12 @@ def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
     messages = _build_messages(inp)
     raw = _call_and_parse(llm, messages)
     if raw is None:
-        return ExtractOutput(events=[], suspected_injection_segment_ids=[], dropped_segment_ids=[])
+        # LLM が読めなくても、規則による誘導の疑いの検出は必ずかける
+        return ExtractOutput(
+            events=[],
+            suspected_injection_segment_ids=detect_injection(inp.segments),
+            dropped_segment_ids=[],
+        )
 
     valid_labels = {s.label for s in inp.segments}
     valid_active_nos = {e.event_no for e in inp.active_events}
@@ -86,9 +92,9 @@ def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
     raw_injection_ids = raw.get("suspected_injection_segment_ids") or []
     if not isinstance(raw_injection_ids, list):
         raw_injection_ids = []
-    suspected_injection = [
-        sid for sid in raw_injection_ids if isinstance(sid, str) and sid in valid_labels
-    ]
+    llm_flagged = [sid for sid in raw_injection_ids if isinstance(sid, str) and sid in valid_labels]
+    # LLM の判定に、コードの規則で拾った番号を合わせる（LLM が見逃すことがあるため）
+    suspected_injection = merge_labels(llm_flagged, detect_injection(inp.segments))
 
     return ExtractOutput(
         events=events,
