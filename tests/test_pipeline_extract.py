@@ -183,6 +183,83 @@ def test_ai_verified_origin_is_kept_when_not_all_ai() -> None:
     assert _extract_single_event_origin(speaker="user", llm_origin="ai_verified") == "ai_verified"
 
 
+# ---- AD-10：過去に却下した案との類似 ----------------------------------------
+
+
+def _extract_with_rejected_history(
+    *, kind: str, similar_rejected_event_no: object, past_rejected_nos: list[int]
+) -> object:
+    from ai_hackathon_team_a.pipeline.contracts import EventSummary
+
+    llm = _fake_llm(
+        json.dumps(
+            {
+                "events": [
+                    {
+                        "kind": kind,
+                        "summary": "X",
+                        "reason": None,
+                        "occurred_at": "2026-09-21T10:00:00+09:00",
+                        "segment_ids": ["S1-1"],
+                        "origin": None,
+                        "supersedes_event_no": None,
+                        "conflicts_with_event_no": None,
+                        "similar_rejected_event_no": similar_rejected_event_no,
+                    }
+                ],
+                "suspected_injection_segment_ids": [],
+            }
+        )
+    )
+    inp = ExtractInput(
+        goal_description="ゴール",
+        segments=[_segment("S1-1")],
+        active_events=[],
+        past_rejected_events=[
+            EventSummary(event_no=n, kind="rejected_option", summary="過去の却下案", reason=None)
+            for n in past_rejected_nos
+        ],
+    )
+    return extract_events(inp, llm).events[0].similar_rejected_event_no
+
+
+def test_similar_rejected_event_no_kept_when_in_past_rejected_list() -> None:
+    assert (
+        _extract_with_rejected_history(
+            kind="decision", similar_rejected_event_no=3, past_rejected_nos=[3, 7]
+        )
+        == 3
+    )
+
+
+def test_similar_rejected_event_no_dropped_when_not_passed_to_this_call() -> None:
+    """組をまたいだ示唆を防ぐ（I1）：渡していない番号は null にする。"""
+
+    assert (
+        _extract_with_rejected_history(
+            kind="decision", similar_rejected_event_no=99, past_rejected_nos=[3, 7]
+        )
+        is None
+    )
+
+
+def test_similar_rejected_event_no_dropped_for_ineligible_kind() -> None:
+    """対象は decision/finding/open_issue だけ（status などには付かない）。"""
+
+    assert (
+        _extract_with_rejected_history(
+            kind="status", similar_rejected_event_no=3, past_rejected_nos=[3]
+        )
+        is None
+    )
+    assert (
+        _extract_with_rejected_history(
+            kind="rejected_option", similar_rejected_event_no=3, past_rejected_nos=[3]
+        )
+        is None
+    )
+
+
 # ---- 塊分け（chunk_segments） -----------------------------------------------
 
 

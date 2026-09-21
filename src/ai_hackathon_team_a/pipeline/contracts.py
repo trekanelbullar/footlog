@@ -7,7 +7,7 @@
 from datetime import datetime
 from typing import Literal, Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 EventKind = Literal["decision", "rejected_option", "open_issue", "finding", "status"]
 Origin = Literal["human_originated", "ai_verified", "ai_unverified", "document"]
@@ -62,6 +62,9 @@ class ExtractInput(BaseModel):
     goal_description: str
     segments: list[SegmentIn]
     active_events: list[EventSummary]
+    # AD-10：同じ組で見える過去の rejected_option（置き換えられたものも含む。除外は除く）。
+    # 任意の項目として追加（既定は空リストなので既存の呼び方は変わらない）。
+    past_rejected_events: list[EventSummary] = Field(default_factory=list)
 
 
 class ExtractedEvent(BaseModel):
@@ -75,6 +78,9 @@ class ExtractedEvent(BaseModel):
     origin: Origin | None
     supersedes_event_no: int | None
     conflicts_with_event_no: int | None
+    # AD-10：過去に却下した案との類似（対象は decision/finding/open_issue だけ）。
+    # コードの検査で、その呼び出しに渡した過去の却下案の番号でなければ null にする。
+    similar_rejected_event_no: int | None = None
 
 
 class ExtractOutput(BaseModel):

@@ -37,6 +37,9 @@ class IngestResult:
     segment_count: int
     new_segment_count: int
     redaction_count: int
+    # AD-8：W8（会話の貼り付け）だけで埋める、話者の目印の内訳。それ以外の取り込み
+    # （W9・W23）では使わないので None のまま。
+    speaker_counts: dict[str, int] | None = None
 
     @property
     def label_prefix(self) -> str:
@@ -89,7 +92,17 @@ def ingest_conversation(
         segment_count=len(inserted),
         new_segment_count=sum(inserted),
         redaction_count=redaction_count,
+        speaker_counts=_speaker_counts(raw_segments),
     )
+
+
+def _speaker_counts(raw_segments: list[RawSegment]) -> dict[str, int]:
+    """AD-8：会話の貼り付けの区切りを、話者ごとに数える（user・ai・unknown）。"""
+
+    counts = {"user": 0, "ai": 0, "unknown": 0}
+    for seg in raw_segments:
+        counts[seg.speaker or "unknown"] += 1
+    return counts
 
 
 def ingest_file(

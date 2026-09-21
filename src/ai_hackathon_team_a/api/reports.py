@@ -155,6 +155,21 @@ def get_report(
         f"E{event_no}": _segments_for_labels(conn, project_id=pid, labels=segment_ids, minimal=True)
         for event_no, _, _, _, segment_ids in events_rows
     }
+    # AD-10：flags.rejected_similarity が指す却下案は、置き換え済みで event_ids
+    # （図のノード）に含まれないことがあるため、node_evidence に別途足す
+    # （web はリンクから根拠の原文を開ける）。
+    rejected_event_nos = sorted(
+        {item["rejected_event_no"] for item in (flags or {}).get("rejected_similarity", [])}
+    )
+    if rejected_event_nos:
+        rejected_rows = conn.execute(
+            "SELECT event_no, segment_ids FROM events WHERE project_id = %s AND event_no = ANY(%s)",
+            (pid, rejected_event_nos),
+        ).fetchall()
+        for event_no, segment_ids in rejected_rows:
+            node_evidence[f"E{event_no}"] = _segments_for_labels(
+                conn, project_id=pid, labels=segment_ids, minimal=True
+            )
     timeline = [
         {"event_no": event_no, "occurred_at": occurred_at, "kind": kind, "summary": summary}
         for event_no, kind, summary, occurred_at, _ in events_rows

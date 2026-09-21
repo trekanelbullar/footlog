@@ -22,6 +22,12 @@
   読み直しただけで、同じ出来事を重複して作らないでください）。新しい情報が
   あって内容を更新する必要があるときだけ、その出来事を返し、置き換える元の
   出来事の番号を `supersedes_event_no` に付けてください。
+- ユーザーメッセージには「過去に却下した案」の一覧も渡されます。新しく抽出した
+  `decision`・`finding`・`open_issue` の出来事が、その中のどれかと内容が似ている
+  （同じ論点が形を変えて再び持ち上がっている）と判断できるときだけ、その過去の
+  案の番号を `similar_rejected_event_no` に入れてください。それ以外（似た案が
+  無い、または種類が `rejected_option`・`status` のとき）は null にしてください。
+  一覧に無い番号を作ってはいけません。
 
 # 出力形式
 次の JSON 形式で、出来事の配列を返してください（余計な文章は付けない）。
@@ -36,7 +42,8 @@
       "segment_ids": ["S3-12", "S3-13"],
       "origin": "human_originated | ai_verified | ai_unverified | document | null",
       "supersedes_event_no": null,
-      "conflicts_with_event_no": null
+      "conflicts_with_event_no": null,
+      "similar_rejected_event_no": null
     }}
   ],
   "suspected_injection_segment_ids": []

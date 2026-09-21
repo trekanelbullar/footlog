@@ -8,15 +8,18 @@ member 宛ては実効の可視性が ``all`` の出来事だけを見る。し�
 """
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
 
 from ai_hackathon_team_a import notify, visibility
 from ai_hackathon_team_a.worker_settings import WorkerSettings
+
+_JST = ZoneInfo("Asia/Tokyo")
 
 Audience = Literal["all", "managers"]
 
@@ -31,10 +34,25 @@ class _Project:
     exclude_weekends: bool
 
 
-def _hours_excluding_weekends(start: datetime, end: datetime) -> float:
-    """``start`` から ``end`` までの経過時間を、土日を除いて時間単位で数える。
+def _fetch_cost_limited_dates(conn: psycopg.Connection) -> set[date]:
+    """AD-9：日次のコスト上限に達して分析を行わなかった日（日本時間）の一覧。
 
-    厳密な時分割ではなく、日単位で土日を除外する近似（デモの規模で十分な精度）。
+    ``daily_cost_alerts`` はプロジェクトをまたいだ全体で1日1行なので、全件を
+    そのまま使う。
+    """
+
+    rows = conn.execute("SELECT alert_date FROM daily_cost_alerts").fetchall()
+    return {row[0] for row in rows}
+
+
+def _hours_excluding_days(
+    start: datetime, end: datetime, *, exclude_weekends: bool, excluded_dates: set[date]
+) -> float:
+    """``start`` から ``end`` までの経過時間を、除外する日を飛ばして時間単位で数える。
+
+    除外する日は、土日（``exclude_weekends`` のとき）と、日次のコスト上限に達して
+    分析を行わなかった日（AD-9、``excluded_dates``。こちらは常に除外する）の
+    どちらか。厳密な時分割ではなく、日単位で除外する近似（デモの規模で十分な精度）。
     """
 
     if end <= start:
@@ -49,16 +67,20 @@ def _hours_excluding_weekends(start: datetime, end: datetime) -> float:
             end,
             datetime.combine(cursor.date(), datetime.min.time(), tzinfo=cursor.tzinfo) + one_day,
         )
-        if cursor.weekday() < 5:  # 0=月 … 4=金
+        is_weekend = exclude_weekends and cursor.weekday() >= 5  # 5=土 6=日
+        is_cost_limited_day = cursor.astimezone(_JST).date() in excluded_dates
+        if not is_weekend and not is_cost_limited_day:
             total_hours += (day_end - cursor).total_seconds() / 3600
         cursor = day_end
     return total_hours
 
 
-def _elapsed_hours(start: datetime, end: datetime, *, exclude_weekends: bool) -> float:
-    if exclude_weekends:
-        return _hours_excluding_weekends(start, end)
-    return (end - start).total_seconds() / 3600
+def _elapsed_hours(
+    start: datetime, end: datetime, *, exclude_weekends: bool, excluded_dates: set[date]
+) -> float:
+    return _hours_excluding_days(
+        start, end, exclude_weekends=exclude_weekends, excluded_dates=excluded_dates
+    )
 
 
 def _last_progress_at(
@@ -101,11 +123,17 @@ def check_and_notify_no_progress(
     """1プロジェクト分の無進捗判定・通知（設計書 §5.7）。送った通知の件数を返す。"""
 
     now = now or datetime.now(UTC)
+    cost_limited_dates = _fetch_cost_limited_dates(conn)
     sent = 0
     for audience, recipients_role in (("managers", "manager"), ("all", "member")):
         since = _last_progress_at(conn, project_id=project.id, audience=audience)
         baseline = since or project.created_at
-        elapsed = _elapsed_hours(baseline, now, exclude_weekends=project.exclude_weekends)
+        elapsed = _elapsed_hours(
+            baseline,
+            now,
+            exclude_weekends=project.exclude_weekends,
+            excluded_dates=cost_limited_dates,
+        )
         if elapsed < project.no_progress_threshold_hours:
             continue
 

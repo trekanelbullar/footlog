@@ -33,6 +33,9 @@ class RenderEvent:
     origin: Origin | None
     kind: EventKind | None = None
     reason: str | None = None
+    # AD-10：過去に却下した案との類似（この版で見せてよいものだけ、呼び出し側が
+    # 実効の可視性を確認済み）。
+    similar_rejected_event_no: int | None = None
 
 
 @dataclass(frozen=True)
@@ -42,6 +45,7 @@ class RenderedReport:
     body_markdown: str
     evidence_catalog: dict[str, list[str]]
     unverified_ai_count: int
+    rejected_similarity_count: int
 
 
 def render_markdown(
@@ -56,6 +60,11 @@ def render_markdown(
     origin_by_event_no = {event.event_no: event.origin for event in events}
     kind_by_event_no = {event.event_no: event.kind for event in events}
     reason_by_event_no = {event.event_no: event.reason for event in events}
+    rejected_by_event_no = {
+        event.event_no: event.similar_rejected_event_no
+        for event in events
+        if event.similar_rejected_event_no is not None
+    }
 
     unverified_count = sum(
         1
@@ -63,11 +72,13 @@ def render_markdown(
         for event_no in sentence.event_nos
         if origin_by_event_no.get(event_no) == "ai_unverified"
     )
+    rejected_similarity_count = len(rejected_by_event_no)
 
     lines: list[str] = []
     if _DECISIONS_HEADING in headings:
         lines.append(f"未確認（AIの提案のまま）：{unverified_count}件")
-        lines.append("")
+    lines.append(f"過去に却下した案と類似の可能性：{rejected_similarity_count}件")
+    lines.append("")
 
     footnote_no = 0
     evidence_catalog: dict[str, list[str]] = {}
@@ -104,7 +115,15 @@ def render_markdown(
             ):
                 unresolved_marker = f" {_UNRESOLVED_REASON_SUFFIX}"
 
-            lines.append(f"- {sentence.text}{origin_marker}{unresolved_marker}{footnote_marker}")
+            rejected_nos = sorted(
+                {rejected_by_event_no[n] for n in sentence.event_nos if n in rejected_by_event_no}
+            )
+            rejected_marker = "".join(f" 〔過去に却下した案と類似：E{m}〕" for m in rejected_nos)
+
+            lines.append(
+                f"- {sentence.text}{origin_marker}{unresolved_marker}"
+                f"{rejected_marker}{footnote_marker}"
+            )
         lines.append("")
 
     body_markdown = "\n".join(lines).rstrip() + "\n"
@@ -112,4 +131,5 @@ def render_markdown(
         body_markdown=body_markdown,
         evidence_catalog=evidence_catalog,
         unverified_ai_count=unverified_count,
+        rejected_similarity_count=rejected_similarity_count,
     )

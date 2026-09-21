@@ -77,6 +77,7 @@ def create_conversation_source(
         "version_no": result.version_no,
         "segment_count": result.segment_count,
         "redaction_count": result.redaction_count,
+        "speaker_counts": result.speaker_counts,
     }
 
 

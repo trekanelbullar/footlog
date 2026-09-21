@@ -10,13 +10,17 @@
 回答画面へのリンクだけを載せる）。
 """
 
+from datetime import UTC, datetime
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
 
 from ai_hackathon_team_a import mail
 from ai_hackathon_team_a.worker_settings import WorkerSettings
+
+_JST = ZoneInfo("Asia/Tokyo")
 
 
 def _app_url(settings: WorkerSettings, path: str) -> str:
@@ -167,6 +171,41 @@ def send_question_notification(
         settings=settings,
         transport=transport,
     )
+
+
+def notify_cost_limited_once_per_day(
+    conn: psycopg.Connection, *, project_id: UUID, now: datetime | None = None
+) -> None:
+    """AD-9：``cost_limited`` で終わった日、そのプロジェクトの manager にアプリ内通知
+    （kind=``cost_limited``）を1日1回だけ送る。メールは送らない（``SYSTEM_ALERT_EMAIL``
+    への通知は ``llm.py`` の ``call_llm`` が別に行う）。
+    """
+
+    start_of_day = (
+        (now or datetime.now(UTC))
+        .astimezone(_JST)
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+    )
+    already_sent = conn.execute(
+        "SELECT 1 FROM notifications WHERE project_id = %s AND kind = 'cost_limited' "
+        "AND created_at >= %s LIMIT 1",
+        (project_id, start_of_day),
+    ).fetchone()
+    if already_sent is not None:
+        return
+
+    managers = conn.execute(
+        "SELECT user_id FROM project_members WHERE project_id = %s AND role = 'manager'",
+        (project_id,),
+    ).fetchall()
+    for (user_id,) in managers:
+        record_notification(
+            conn,
+            user_id=user_id,
+            project_id=project_id,
+            kind="cost_limited",
+            title="本日は費用の上限に達したため、分析を行っていません",
+        )
 
 
 def send_no_progress_notification(

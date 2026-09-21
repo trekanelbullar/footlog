@@ -94,6 +94,8 @@ class _EventRow:
     support: str | None
     supersedes_event_id: UUID | None
     partition: Partition
+    # AD-10：過去に却下した案との類似（decision/finding/open_issue だけに付く）。
+    similar_rejected_event_no: int | None = None
 
 
 @dataclass
@@ -232,6 +234,8 @@ def _run_claimed(
             mail_transport=mail_transport,
         )
     except CostLimitExceeded:
+        with pool.connection() as conn:
+            notify.notify_cost_limited_once_per_day(conn, project_id=project_id)
         _finish_run(pool, run_id, status="failed", outcome="cost_limited")
         return RunOutcome(outcome="cost_limited")
     except RunTimeoutError:
@@ -301,8 +305,14 @@ def _run_stages(
             if not segments:
                 continue
             pre_existing = active_input.summaries.get(partition, [])
+            past_rejected = active_input.past_rejected.get(partition, [])
             result = _extract_partition(
-                segments, pre_existing, llm_fn, deadline, goal_description=goal_description
+                segments,
+                pre_existing,
+                llm_fn,
+                deadline,
+                goal_description=goal_description,
+                past_rejected_events=past_rejected,
             )
             suspected_injection_by_partition[partition] |= result.suspected_injection_segment_ids
             # 出来事が0件でも、消費されなかった区切りの carry_count は進める（§5.3 (6)）。
@@ -385,7 +395,10 @@ def _run_stages(
         project_id=project_id,
         mode=mode_all,
         goal_description=goal_description,
+        audience="all",
         active_events=active_all,
+        all_events=all_events,
+        state_map=state_map,
         new_event_nos=set(new_event_nos),
         llm_fn=llm_fn,
         suspected_injection_labels=suspected_injection_by_partition["all"],
@@ -396,7 +409,10 @@ def _run_stages(
             project_id=project_id,
             mode=mode_managers,
             goal_description=goal_description,
+            audience="managers",
             active_events=active_managers,
+            all_events=all_events,
+            state_map=state_map,
             new_event_nos=set(new_event_nos),
             llm_fn=llm_fn,
             suspected_injection_labels=(
@@ -553,6 +569,8 @@ class _ActiveEventsByPartition:
 
     summaries: dict[Partition, list[EventSummary]]
     dedup_keys: dict[Partition, set[tuple[EventKind, frozenset[str]]]]
+    # AD-10：同じ組で見える過去の rejected_option（置き換えられたものも含む。除外は除く）。
+    past_rejected: dict[Partition, list[EventSummary]]
 
 
 def _fetch_active_events_by_partition_input(
@@ -574,7 +592,39 @@ def _fetch_active_events_by_partition_input(
             "all": {(e.kind, frozenset(e.segment_ids)) for e in active_all},
             "managers": {(e.kind, frozenset(e.segment_ids)) for e in active_managers},
         },
+        past_rejected={
+            "all": _past_rejected_by_audience(all_events, state_map, "all"),
+            "managers": _past_rejected_by_audience(all_events, state_map, "managers"),
+        },
     )
+
+
+def _past_rejected_by_audience(
+    events: list[_EventRow],
+    state_map: dict[str, tuple[bool, SourceVisibility]],
+    audience: Audience,
+) -> list[EventSummary]:
+    """AD-10：組ごとに見える過去の ``rejected_option``（置き換えられたものも含む）。
+
+    「今も有効」（``_active_for_audience``）とは違い、置き換え済みのものも残す
+    （再浮上の検知は、過去に一度却下した案そのものと比べるため）。実効の可視性の
+    規則は同じ（除外は除く。member 相当の ``all`` は実効の可視性が ``all`` の
+    ものだけ）。
+    """
+
+    matched: list[_EventRow] = []
+    for event in events:
+        if event.kind != "rejected_option":
+            continue
+        eff = visibility.effective_visibility(
+            partition=event.partition, source_states=_states_for(event.segment_ids, state_map)
+        )
+        if eff == "excluded":
+            continue
+        if audience == "all" and eff != "all":
+            continue
+        matched.append(event)
+    return [_to_event_summary(e) for e in sorted(matched, key=lambda e: e.occurred_at)]
 
 
 def _to_event_summary(row: _EventRow) -> EventSummary:
@@ -595,6 +645,7 @@ def _extract_partition(
     deadline: float,
     *,
     goal_description: str,
+    past_rejected_events: list[EventSummary],
 ) -> _PartitionExtractionResult:
     result = _PartitionExtractionResult()
     provisional_events: list[EventSummary] = []
@@ -606,6 +657,7 @@ def _extract_partition(
             goal_description=goal_description,
             segments=chunk,
             active_events=[*pre_existing_active, *provisional_events],
+            past_rejected_events=past_rejected_events,
         )
         output = extract_events(chunk_input, llm_fn)
         result.suspected_injection_segment_ids.update(output.suspected_injection_segment_ids)
@@ -722,8 +774,8 @@ def _persist_partition(
             INSERT INTO events
                 (project_id, run_id, event_no, kind, summary, reason, occurred_at,
                  segment_ids, origin, visibility_at_creation, support,
-                 supersedes_event_id, partition)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 supersedes_event_id, partition, similar_rejected_event_no)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
@@ -740,6 +792,7 @@ def _persist_partition(
                 support,
                 supersedes_event_id,
                 partition,
+                event.similar_rejected_event_no,
             ),
         ).fetchone()
         provisional_to_real[item.provisional_no] = row[0]
@@ -862,7 +915,7 @@ def _fetch_all_events_and_states(
     rows = conn.execute(
         """
         SELECT id, event_no, kind, summary, reason, occurred_at, segment_ids, origin,
-               support, supersedes_event_id, partition
+               support, supersedes_event_id, partition, similar_rejected_event_no
         FROM events
         WHERE project_id = %s
         """,
@@ -881,6 +934,7 @@ def _fetch_all_events_and_states(
             support=row[8],
             supersedes_event_id=row[9],
             partition=row[10],
+            similar_rejected_event_no=row[11],
         )
         for row in rows
     ]
@@ -964,7 +1018,10 @@ def _build_report(
     project_id: UUID,
     mode: Literal["diff", "baseline"],
     goal_description: str,
+    audience: Audience,
     active_events: list[_EventRow],
+    all_events: list[_EventRow],
+    state_map: dict[str, tuple[bool, SourceVisibility]],
     new_event_nos: set[int],
     llm_fn,
     suspected_injection_labels: set[str],
@@ -994,6 +1051,13 @@ def _build_report(
         allow_regeneration=allow_regeneration,
     )
 
+    # AD-10：この版で警告してよい「過去に却下した案との類似」（その却下案の実効の
+    # 可視性が、この版（audience）で見えるものだけ）。見えなければ警告を付けない
+    # （全員向けの版で管理者限定の却下案との類似を示唆しない）。
+    rejected_flags, rejected_by_event_no, rejected_evidence_labels = _rejected_similarity_for(
+        active_events, all_events, state_map, audience
+    )
+
     render_events = [
         RenderEvent(
             event_no=e.event_no,
@@ -1001,6 +1065,7 @@ def _build_report(
             origin=e.origin,
             kind=e.kind,
             reason=e.reason,
+            similar_rejected_event_no=rejected_by_event_no.get(e.event_no),
         )
         for e in active_events
     ]
@@ -1021,7 +1086,9 @@ def _build_report(
     ]
     mermaid_dsl = build_mermaid(mermaid_events)
 
-    input_segment_ids = sorted({sid for e in active_events for sid in e.segment_ids})
+    input_segment_ids = sorted(
+        {sid for e in active_events for sid in e.segment_ids} | rejected_evidence_labels
+    )
     cited_labels = sorted({sid for labels in rendered.evidence_catalog.values() for sid in labels})
 
     flags: dict[str, object] = {
@@ -1030,6 +1097,7 @@ def _build_report(
         # だけ）をそのまま使う（I1 は呼び出し側の組の分け方で守られる）。
         "suspected_injection": sorted(suspected_injection_labels),
         "unverified_ai_count": rendered.unverified_ai_count,
+        "rejected_similarity": rejected_flags,
     }
 
     return _BuiltReport(
@@ -1045,6 +1113,45 @@ def _build_report(
         summary_for_mail=result.output.summary_for_mail,
         had_new_events=bool(audience_new_event_nos),
     )
+
+
+def _rejected_similarity_for(
+    active_events: list[_EventRow],
+    all_events: list[_EventRow],
+    state_map: dict[str, tuple[bool, SourceVisibility]],
+    audience: Audience,
+) -> tuple[list[dict[str, int]], dict[int, int], set[str]]:
+    """AD-10：この版（``audience``）で見せてよい「過去に却下した案との類似」を選ぶ。
+
+    却下案そのもの（``similar_rejected_event_no`` が指す出来事）の実効の可視性を、
+    この版の audience の規則で判定し、見えるものだけを残す。戻り値は
+    (``flags.rejected_similarity`` そのままの形のリスト、event_no → rejected_event_no
+    の対応、却下案の根拠の区切り（input_segment_ids に足す分）)。
+    """
+
+    events_by_no = {e.event_no: e for e in all_events}
+    flags: list[dict[str, int]] = []
+    by_event_no: dict[int, int] = {}
+    evidence_labels: set[str] = set()
+
+    for event in active_events:
+        if event.similar_rejected_event_no is None:
+            continue
+        target = events_by_no.get(event.similar_rejected_event_no)
+        if target is None:
+            continue
+        eff = visibility.effective_visibility(
+            partition=target.partition, source_states=_states_for(target.segment_ids, state_map)
+        )
+        if eff == "excluded":
+            continue
+        if audience == "all" and eff != "all":
+            continue
+        flags.append({"event_no": event.event_no, "rejected_event_no": target.event_no})
+        by_event_no[event.event_no] = target.event_no
+        evidence_labels.update(target.segment_ids)
+
+    return flags, by_event_no, evidence_labels
 
 
 def _store_report(

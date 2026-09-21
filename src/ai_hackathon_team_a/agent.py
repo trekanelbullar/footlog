@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
@@ -38,6 +39,9 @@ _MAX_TOOL_ROUNDS_PER_EVENT = 5
 _MAX_QUESTIONS_PER_RUN = 2
 _MAX_READ_SEGMENTS = 10
 _MAX_SEARCH_RESULTS = 10
+# AD-11：1人あたり、日本時間の1日に届く質問は最大3問まで（全プロジェクト合計）。
+_MAX_QUESTIONS_PER_DAY = 3
+_JST = ZoneInfo("Asia/Tokyo")
 
 _TOOLS: list[dict[str, object]] = [
     {
@@ -454,7 +458,7 @@ def _tool_search_events(
     project_id = _project_id_of(conn, candidate.event_id)
     rows = conn.execute(
         """
-        SELECT id, event_no, summary, segment_ids, partition, supersedes_event_id
+        SELECT id, event_no, summary, kind, segment_ids, partition, supersedes_event_id
         FROM events WHERE project_id = %s
         """,
         (project_id,),
@@ -463,7 +467,7 @@ def _tool_search_events(
     state_map = visibility.fetch_segment_states_for_project(conn, project_id=project_id)
     eligible: dict[UUID, tuple] = {}
     for row in rows:
-        event_id, event_no, summary, segment_ids, partition, supersedes_event_id = row
+        event_id, event_no, summary, kind, segment_ids, partition, supersedes_event_id = row
         eff = visibility.effective_visibility(
             partition=partition,
             source_states=[state_map[sid] for sid in (segment_ids or []) if sid in state_map],
@@ -472,13 +476,17 @@ def _tool_search_events(
             continue
         if candidate.partition == "all" and eff != "all":
             continue
-        eligible[event_id] = (event_no, summary, supersedes_event_id)
+        eligible[event_id] = (event_no, summary, kind, supersedes_event_id)
 
-    superseded = {v[2] for v in eligible.values() if v[2] is not None and v[2] in eligible}
+    superseded = {v[3] for v in eligible.values() if v[3] is not None and v[3] in eligible}
     matches = [
         {"event_no": no, "summary": summary}
-        for eid, (no, summary, _) in eligible.items()
-        if eid not in superseded and query.lower() in summary.lower() and eid != candidate.event_id
+        for eid, (no, summary, kind, _) in eligible.items()
+        # AD-10：置き換えられた出来事は検索対象から外すが、過去の rejected_option
+        # （再浮上の検知の対象）だけは、置き換えられていても検索できるようにする。
+        if (eid not in superseded or kind == "rejected_option")
+        and query.lower() in summary.lower()
+        and eid != candidate.event_id
     ]
     return {"events": matches[:_MAX_SEARCH_RESULTS]}
 
@@ -498,6 +506,9 @@ def _tool_ask_member(
     """質問を保存する。
 
     送る直前の再確認【C-1】で条件を満たさなければ ``expired`` で保存し、送らない。
+    条件は満たすが、その人のその日の質問の枠（AD-11、最大3問／日、全プロジェクト
+    合計）が埋まっていれば ``deferred`` で保存し、メールもアプリ内通知も送らない
+    （定期実行の最初に ``send_deferred_questions`` が古い順に送る）。
     """
 
     clean_question, _ = redact(question.strip() or "（質問内容が空でした）")
@@ -509,7 +520,12 @@ def _tool_ask_member(
         recipient=recipient,
         start_epoch=start_epoch,
     )
-    status = "open" if can_send else "expired"
+    if not can_send:
+        status = "expired"
+    elif _todays_question_count(conn, asked_to=recipient.user_id) >= _MAX_QUESTIONS_PER_DAY:
+        status = "deferred"
+    else:
+        status = "open"
 
     row = conn.execute(
         """
@@ -530,7 +546,7 @@ def _tool_ask_member(
     ).fetchone()
     question_id = row[0]
 
-    if not can_send:
+    if status != "open":
         return False
 
     notify.send_question_notification(
@@ -544,6 +560,127 @@ def _tool_ask_member(
         transport=mail_transport,
     )
     return True
+
+
+def _start_of_jst_day(now: datetime) -> datetime:
+    jst_now = now.astimezone(_JST)
+    return jst_now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _todays_question_count(
+    conn: psycopg.Connection, *, asked_to: UUID, now: datetime | None = None
+) -> int:
+    """AD-11：その人に、日本時間の今日すでに届いた（＝ deferred でない）質問の数。
+
+    全プロジェクト合計。厳密には「作成時点で expired になったもの」もここに含まれ
+    うる（後から状態だけ見ると作成時に送られたか区別できないため）が、通常の
+    利用では稀な近似として許容する。
+    """
+
+    start_of_day = _start_of_jst_day(now or datetime.now(UTC))
+    row = conn.execute(
+        "SELECT COUNT(*) FROM agent_questions "
+        "WHERE asked_to = %s AND status != 'deferred' AND created_at >= %s",
+        (asked_to, start_of_day),
+    ).fetchone()
+    return int(row[0]) if row else 0
+
+
+def _recipient_still_eligible(
+    conn: psycopg.Connection,
+    *,
+    project_id: UUID,
+    partition: Partition,
+    segment_ids: list[str],
+    asked_to: UUID,
+) -> bool:
+    """【C-1】の visibility・role の再確認（epoch は含まない部分）。"""
+
+    if partition == "managers":
+        membership = authz.get_membership(conn, project_id=project_id, user_id=asked_to)
+        if membership is None or membership.role != "manager":
+            return False
+
+    states = visibility.fetch_source_states_for_labels(
+        conn, project_id=project_id, labels=segment_ids
+    )
+    eff = visibility.effective_visibility(partition=partition, source_states=states)
+    if eff == "excluded":
+        return False
+    return not (partition == "all" and eff != "all")
+
+
+def send_deferred_questions(
+    conn: psycopg.Connection,
+    *,
+    worker_settings: WorkerSettings,
+    mail_transport: httpx.BaseTransport | None = None,
+    now: datetime | None = None,
+) -> int:
+    """AD-11：定期実行（W17）の最初に、枠が空いている ``deferred`` の質問を
+
+    古い順に送り、``open`` にする。送る直前の可視性・ロールの再確認【C-1】は
+    ``ask_member`` と同じ。枠が今日もう無い人はそのまま ``deferred`` に残す。
+    再確認で条件を満たさなくなっていれば ``expired`` にする（枠を消費しない）。
+    送った件数を返す。
+    """
+
+    now = now or datetime.now(UTC)
+    rows = conn.execute(
+        "SELECT id, project_id, asked_to, question, related_event_id, partition "
+        "FROM agent_questions WHERE status = 'deferred' ORDER BY created_at ASC"
+    ).fetchall()
+
+    remaining_by_user: dict[UUID, int] = {}
+    sent = 0
+
+    for question_id, project_id, asked_to, question_text, related_event_id, partition in rows:
+        event_row = conn.execute(
+            "SELECT segment_ids FROM events WHERE id = %s", (related_event_id,)
+        ).fetchone()
+        segment_ids = list(event_row[0] or []) if event_row else []
+
+        if not _recipient_still_eligible(
+            conn,
+            project_id=project_id,
+            partition=partition,
+            segment_ids=segment_ids,
+            asked_to=asked_to,
+        ):
+            conn.execute(
+                "UPDATE agent_questions SET status = 'expired' WHERE id = %s", (question_id,)
+            )
+            continue
+
+        if asked_to not in remaining_by_user:
+            remaining_by_user[asked_to] = _MAX_QUESTIONS_PER_DAY - _todays_question_count(
+                conn, asked_to=asked_to, now=now
+            )
+        if remaining_by_user[asked_to] <= 0:
+            continue  # 今日の枠が無い。deferred のまま次回に回す。
+
+        recipient = _as_recipient(conn, project_id=project_id, user_id=asked_to)
+        if recipient is None:
+            conn.execute(
+                "UPDATE agent_questions SET status = 'expired' WHERE id = %s", (question_id,)
+            )
+            continue
+
+        conn.execute("UPDATE agent_questions SET status = 'open' WHERE id = %s", (question_id,))
+        notify.send_question_notification(
+            conn,
+            project_id=project_id,
+            user_id=asked_to,
+            email=recipient.email,
+            question_id=question_id,
+            question_text=question_text,
+            settings=worker_settings,
+            transport=mail_transport,
+        )
+        remaining_by_user[asked_to] -= 1
+        sent += 1
+
+    return sent
 
 
 def _can_send_question_now(
@@ -560,18 +697,13 @@ def _can_send_question_now(
     if epoch_row is None or epoch_row[0] != start_epoch:
         return False
 
-    if candidate.partition == "managers":
-        membership = authz.get_membership(conn, project_id=project_id, user_id=recipient.user_id)
-        if membership is None or membership.role != "manager":
-            return False
-
-    states = visibility.fetch_source_states_for_labels(
-        conn, project_id=project_id, labels=candidate.segment_ids
+    return _recipient_still_eligible(
+        conn,
+        project_id=project_id,
+        partition=candidate.partition,
+        segment_ids=candidate.segment_ids,
+        asked_to=recipient.user_id,
     )
-    eff = visibility.effective_visibility(partition=candidate.partition, source_states=states)
-    if eff == "excluded":
-        return False
-    return not (candidate.partition == "all" and eff != "all")
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ from uuid import UUID
 
 import httpx
 
-from ai_hackathon_team_a import noprogress
+from ai_hackathon_team_a import agent, noprogress
 from ai_hackathon_team_a.db import ConnectionPool
 from ai_hackathon_team_a.llm import call_llm
 from ai_hackathon_team_a.run import execute_run
@@ -41,6 +41,12 @@ def run_cron_tick(
     """W17 の実体。"""
 
     deadline = time.monotonic() + budget_seconds
+
+    # AD-11：定期実行の最初に、枠が空いている deferred の質問を古い順に送る。
+    with pool.connection() as conn:
+        agent.send_deferred_questions(
+            conn, worker_settings=worker_settings, mail_transport=mail_transport
+        )
 
     with pool.connection() as conn:
         project_ids: list[UUID] = [

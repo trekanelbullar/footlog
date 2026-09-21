@@ -24,6 +24,9 @@ from ai_hackathon_team_a.prompts import get_prompts, render
 _VALID_KINDS: frozenset[str] = frozenset(get_args(EventKind))
 _VALID_ORIGINS: frozenset[str] = frozenset(get_args(Origin))
 _MAX_ATTEMPTS = 2  # 1回だけ再試行（合計最大2回呼ぶ）
+# AD-10：再浮上の検知の対象は decision / finding / open_issue だけ（rejected_option 同士の
+# 類似や status には付けない）。
+_RESURGENCE_ELIGIBLE_KINDS: frozenset[str] = frozenset({"decision", "finding", "open_issue"})
 
 
 def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
@@ -44,6 +47,9 @@ def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
 
     valid_labels = {s.label for s in inp.segments}
     valid_active_nos = {e.event_no for e in inp.active_events}
+    # AD-10：この呼び出しに渡した過去の却下案の番号だけを有効とする（組をまたいだ
+    # 示唆を防ぐ。不変条件 I1）。
+    valid_rejected_nos = {e.event_no for e in inp.past_rejected_events}
     speaker_by_label = {s.label: s.speaker for s in inp.segments}
 
     events: list[ExtractedEvent] = []
@@ -76,6 +82,12 @@ def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
         origin = origin if origin in _VALID_ORIGINS else None
         origin = correct_origin(origin, kept_ids, speaker_by_label)
 
+        similar_rejected = _valid_event_no(
+            raw_event.get("similar_rejected_event_no"), valid_rejected_nos
+        )
+        if kind not in _RESURGENCE_ELIGIBLE_KINDS:
+            similar_rejected = None
+
         events.append(
             ExtractedEvent(
                 kind=kind,
@@ -86,6 +98,7 @@ def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
                 origin=origin,
                 supersedes_event_no=supersedes,
                 conflicts_with_event_no=conflicts,
+                similar_rejected_event_no=similar_rejected,
             )
         )
 
@@ -118,7 +131,11 @@ def _build_messages(inp: ExtractInput) -> list[dict[str, object]]:
         f'recorded_at="{s.recorded_at.isoformat()}">\n{s.text}\n</source>'
         for s in inp.segments
     )
-    user = f"# 今も有効な出来事\n{_format_events(inp.active_events)}\n\n# 資料\n{source_blocks}"
+    user = (
+        f"# 今も有効な出来事\n{_format_events(inp.active_events)}\n\n"
+        f"# 過去に却下した案（再浮上の検知用）\n{_format_events(inp.past_rejected_events)}\n\n"
+        f"# 資料\n{source_blocks}"
+    )
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": user},

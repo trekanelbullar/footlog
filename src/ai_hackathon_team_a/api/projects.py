@@ -1,7 +1,9 @@
 """プロジェクト・メンバーの API（W1〜W7b、設計書 §2.1・§1.3）。"""
 
+from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import httpx
 import psycopg
@@ -21,6 +23,8 @@ from ai_hackathon_team_a.authz import Membership
 from ai_hackathon_team_a.worker_settings import WorkerSettings, get_worker_settings
 
 router = APIRouter(dependencies=[Depends(require_worker_secret)])
+
+_JST = ZoneInfo("Asia/Tokyo")
 
 _PROJECT_COLUMNS = (
     "id, name, goal_description, readme_markdown, status, "
@@ -159,6 +163,7 @@ def get_project(
         "my_role": membership.role,
         "latest_run": latest_run,
         "excluded_summary": excluded_summary,
+        "cost_limited_today": _cost_limited_today(conn),
     }
 
 
@@ -334,6 +339,14 @@ def _bump_visibility_epoch(conn: psycopg.Connection, project_id: UUID) -> None:
         "WHERE id = %s",
         (project_id,),
     )
+
+
+def _cost_limited_today(conn: psycopg.Connection) -> bool:
+    """AD-9：日本時間の今日、``daily_cost_alerts`` に行があるか（全員に返してよい）。"""
+
+    today = datetime.now(UTC).astimezone(_JST).date()
+    row = conn.execute("SELECT 1 FROM daily_cost_alerts WHERE alert_date = %s", (today,)).fetchone()
+    return row is not None
 
 
 def _excluded_summary(conn: psycopg.Connection, *, project_id: UUID) -> dict:
