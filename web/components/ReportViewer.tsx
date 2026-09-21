@@ -97,13 +97,16 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
   // 初期値の時点で mermaid_dsl の有無を反映しておく（ReportViewer は版ごとに key で再マウントするため、
   // report が変わった後にこの effect の中で同期的に setState し直す必要がない）。
   const [diagramState, setDiagramState] = useState<"loading" | "ok" | "failed">(() =>
-    report.mermaid_dsl.trim() ? "loading" : "failed"
+    report.mermaid_dsl?.trim() ? "loading" : "failed"
   );
   const [svg, setSvg] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!report.mermaid_dsl.trim()) return;
+    // withheld のときや、worker が mermaid_dsl を null で返したときは描画しない
+    // （reports.mermaid_dsl は DB 上 nullable）。
+    const dsl = report.mermaid_dsl;
+    if (!dsl?.trim()) return;
     let cancelled = false;
 
     const timeoutId = setTimeout(() => {
@@ -115,7 +118,7 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
         const mermaid = (await import("mermaid")).default;
         mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
         const id = `mermaid-v${report.version_no}-${Math.random().toString(36).slice(2, 8)}`;
-        const result = await mermaid.render(id, report.mermaid_dsl);
+        const result = await mermaid.render(id, dsl);
         clearTimeout(timeoutId);
         if (!cancelled) {
           setSvg(result.svg);
@@ -162,18 +165,23 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
     );
   }
 
+  // withheld のとき worker は flags を {} で返す（§5.6 は未規定）。ここでは
+  // withheld=false の場合しか通らないが、型は Partial のため既定値で補う。
+  const suspectedInjection = report.flags.suspected_injection ?? [];
+  const unverifiedAiCount = report.flags.unverified_ai_count ?? 0;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
         <span>生成日時：{formatJst(report.generated_at)}</span>
         <span>判定：{report.judge_status === "pass" ? "合格" : "要確認"}</span>
-        <span>未確認の件数：{report.flags.unverified_ai_count}</span>
+        <span>未確認の件数：{unverifiedAiCount}</span>
       </div>
 
-      {report.flags.suspected_injection.length > 0 && (
+      {suspectedInjection.length > 0 && (
         <div className="rounded bg-red-50 p-3 text-sm text-red-800">
           <p className="font-medium">誘導の疑いのある記述を検出</p>
-          <p className="mt-1 text-xs">対象：{report.flags.suspected_injection.join("、")}</p>
+          <p className="mt-1 text-xs">対象：{suspectedInjection.join("、")}</p>
         </div>
       )}
 

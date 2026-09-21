@@ -165,3 +165,18 @@ def test_member_query_param_audience_managers_is_ignored(
     body = member_resp.json()
     assert body["audience"] == "all"
     assert _SECRET_SUMMARY not in json.dumps(body, ensure_ascii=False)
+    # W19 は §5.6 の形だけを返す（メール用の要約などの内部データを返さない）。
+    assert set(body) == {
+        "version_no",
+        "audience",
+        "generated_at",
+        "judge_status",
+        "withheld",
+        "body_markdown",
+        "footnotes",
+        "mermaid_dsl",
+        "node_evidence",
+        "flags",
+        "timeline",
+        "excluded_summary",
+    }

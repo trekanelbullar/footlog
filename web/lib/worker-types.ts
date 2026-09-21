@@ -293,6 +293,14 @@ export interface TimelineItem {
 /**
  * W19: GET /internal/projects/{pid}/reports/{version_no}
  * §5.6 のとおりの形（画面に出すものの全部）。
+ *
+ * worker の実際の応答（api/reports.py）に合わせた点：
+ * - `mermaid_dsl` は DB 上 nullable（`reports.mermaid_dsl`）で、`withheld` のときは
+ *   常に `null` になる。文字列固定ではない。
+ * - `withheld` のときは `flags` が `{}`（`suspected_injection`・`unverified_ai_count`
+ *   のどちらも無い）で返る。§5.6 はこの場合の形を決めていないため、`Partial` にして
+ *   実際の応答を受け付けられるようにしてある（画面側は `withheld` のときこれらの値を
+ *   見ない）。
  */
 export interface ReportDetail {
   version_no: number;
@@ -302,9 +310,9 @@ export interface ReportDetail {
   withheld: boolean;
   body_markdown: string;
   footnotes: Record<string, FootnoteEntry[]>;
-  mermaid_dsl: string;
+  mermaid_dsl: string | null;
   node_evidence: Record<string, NodeEvidenceEntry[]>;
-  flags: ReportFlags;
+  flags: Partial<ReportFlags>;
   timeline: TimelineItem[];
   excluded_summary: ExcludedSummary | null;
 }

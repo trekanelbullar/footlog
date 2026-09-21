@@ -86,7 +86,7 @@ interface StoredReport {
   withheld: boolean;
   body_markdown: string;
   footnotes: ReportDetail["footnotes"];
-  mermaid_dsl: string;
+  mermaid_dsl: ReportDetail["mermaid_dsl"];
   node_evidence: ReportDetail["node_evidence"];
   flags: ReportDetail["flags"];
   event_nos: number[];
@@ -455,17 +455,20 @@ function seedProject(): StoredProject {
     },
     {
       // §5.5：後から可視性が変わり、閲覧不可になった版の表示確認用（withheld=true）。
+      // 形は worker の実際の応答（api/reports.py の withheld 分岐）に合わせてある：
+      // body_markdown は表示用メッセージ、mermaid_dsl は null、flags は空オブジェクト。
       project_id: PROJECT_ID,
       version_no: 2,
       audience: "all",
       generated_at: "2026-09-19T12:00:00+09:00",
       judge_status: "pass",
       withheld: true,
-      body_markdown: "",
+      body_markdown:
+        "この版には非公開になった情報が含まれるため表示できません。次の実行で作り直されます。",
       footnotes: {},
-      mermaid_dsl: "",
+      mermaid_dsl: null,
       node_evidence: {},
-      flags: { suspected_injection: [], unverified_ai_count: 0 },
+      flags: {},
       event_nos: [],
     },
     {
@@ -1076,7 +1079,15 @@ export function mockExecuteRun(rid: string, userId: string) {
   const { project: p, run } = findProjectByRunId(rid);
   getMemberOr404(p, userId);
   if (run.status !== "queued") {
-    err(409, "already_running", "この実行はすでに開始されています。");
+    // worker（run.py の execute_run）はここをエラーにしない。二重送信で
+    // 引き受けられなかった側は、今の状態をそのまま返す（未確定なら outcome は
+    // "locked" 扱い）。
+    return {
+      run_id: rid,
+      status: run.status,
+      outcome: run.outcome ?? ("locked" as const),
+      version_no: run.version_no,
+    };
   }
   run.status = "running";
   run.started_at = Date.now();
@@ -1198,7 +1209,10 @@ export function mockGetQuestion(qid: string, userId: string): QuestionDetail {
 export function mockAnswerQuestion(qid: string, userId: string, text: string) {
   const q = questions.get(qid);
   if (!q || q.asked_to !== userId) err(404, "not_found", "質問が見つかりません。");
-  if (q.status !== "open") err(409, "not_open", "この質問はすでに回答済みか期限切れです。");
+  // worker（api/notifications.py answer_question）のエラーコードに合わせる。
+  if (q.status !== "open") {
+    err(409, "question_not_open", "この質問は既に回答済みか期限切れです。");
+  }
   if (!text?.trim()) err(400, "invalid_input", "回答が空です。");
   const p = getProjectOr404(q.project_id);
   const sourceNo = p.nextSourceNo++;

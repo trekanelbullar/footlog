@@ -95,7 +95,7 @@ def get_report(
     row = conn.execute(
         """
         SELECT judge_status, body_markdown, mermaid_dsl, evidence_catalog, event_ids,
-               input_segment_ids, flags, summary_for_mail, generated_at, audience
+               input_segment_ids, flags, generated_at, audience
         FROM reports WHERE id = %s
         """,
         (report.id,),
@@ -108,7 +108,6 @@ def get_report(
         event_ids,
         input_segment_ids,
         flags,
-        summary_for_mail,
         generated_at,
         audience,
     ) = row
@@ -174,7 +173,6 @@ def get_report(
         "flags": flags,
         "timeline": timeline,
         "excluded_summary": excluded_summary,
-        "summary_for_mail": summary_for_mail,
     }
 
 
