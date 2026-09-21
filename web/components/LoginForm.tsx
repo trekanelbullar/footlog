@@ -45,7 +45,7 @@ export default function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
           required
           className="rounded border px-3 py-2"
-          placeholder="manager@example.com"
+          placeholder="you@example.com"
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">

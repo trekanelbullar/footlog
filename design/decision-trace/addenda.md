@@ -41,3 +41,9 @@
 - worker は起動時に、今つないでいる DB のユーザーを確かめる。`current_user` が `app_worker` でない、またはスーパーユーザーである場合は、起動しない（管理者の接続文字列で誤って起動したことに気づくため）。
 - テスト環境だけは除く。`APP_ENV=test` のときだけ確認を飛ばし、それ以外（未設定を含む）は必ず確認する（設定を忘れたときに、確認が働く側に倒す）。
 - マイグレーションは `MIGRATION_DATABASE_URL`（Supabase の `postgres` ユーザー）で流し、アプリの `DATABASE_URL`（`app_worker`）とは分ける。マイグレーションのコマンドは `DATABASE_URL` を読まない。
+
+## AD-6 qwen の思考モードを止める指定（2026-09-21、手元での確認中に判明）
+
+- `qwen/qwen3.7-flash` は、既定で思考モードが動く。こちらが何も送らない（設計書 §6.2 の `off`）と、短い入力でも1,000トークン以上を思考に使い、抽出1回が30秒のタイムアウトを超えて失敗した。
+- ゲートウェイ経由で試した指定のうち、思考が止まったのは `enable_thinking: false`（リクエストの本文に追加）だけだった（0.9秒、思考のトークン0）。`reasoning_effort: low`・`reasoning.enabled=false`・`reasoning.effort=none` では止まらなかった。
+- そこで、段階の思考モードが `off` で、モデル名が `qwen/` で始まるときだけ、`enable_thinking: false` を送る。`off` 以外のときは、これまでどおり `reasoning_effort` を送る。qwen 以外のモデルには送らない（受け付けずにエラーになるおそれがあるため）。

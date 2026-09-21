@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LoginForm from "@/components/LoginForm";
+import { isMockMode } from "@/lib/mock/mode";
 
 export default async function LoginPage({
   searchParams,
@@ -23,9 +24,11 @@ export default async function LoginPage({
       <p className="mt-4 text-sm text-gray-600">
         アカウントが無い場合は<Link href="/signup" className="text-blue-600 hover:underline">サインアップ</Link>
       </p>
-      <p className="mt-6 text-xs text-gray-400">
-        モックモードでは manager@example.com / member@example.com のいずれか（パスワードは任意）でログインできます。
-      </p>
+      {isMockMode() && (
+        <p className="mt-6 text-xs text-gray-400">
+          モックモードでは manager@example.com / member@example.com のいずれか（パスワードは任意）でログインできます。
+        </p>
+      )}
     </div>
   );
 }

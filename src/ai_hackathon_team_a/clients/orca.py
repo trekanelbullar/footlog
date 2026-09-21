@@ -16,6 +16,9 @@ ReasoningEffort = Literal["off", "low", "medium", "high"]
 _CHARS_PER_TOKEN_ESTIMATE = 4
 
 
+_QWEN_MODEL_PREFIX = "qwen/"
+
+
 class OrcaClientError(RuntimeError):
     """A safe-to-display Orca Router client error."""
 
@@ -109,7 +112,8 @@ class OrcaClient:
         """段階ごとの LLM 呼び出し（設計書 §6.1・§6.2）。``llm.py`` からだけ呼ばれる。
 
         入力長の上限検査・``OpenAIError`` を汎用エラーに変える作法は ``generate`` と
-        同じ。思考モードが ``off`` 以外のときだけ ``reasoning_effort`` を送る。応答に
+        同じ。思考モードが ``off`` 以外のときだけ ``reasoning_effort`` を送る。``off`` で
+        qwen のモデルのときは ``enable_thinking=false`` を送って思考を止める。応答に
         ``usage`` が無ければ文字数からの概算にし、``estimated=True`` を返す。
         """
 
@@ -128,6 +132,11 @@ class OrcaClient:
         }
         if reasoning != "off":
             kwargs["reasoning_effort"] = reasoning
+        elif model.startswith(_QWEN_MODEL_PREFIX):
+            # qwen は既定で思考が動き、何も送らないと off にならない。ゲートウェイ経由で
+            # 止まるのは enable_thinking=false だけだった（2026-09-21 に実測、追加指示 AD-6）。
+            # qwen 以外のモデルには送らない（受け付けずにエラーになるおそれがあるため）。
+            kwargs["extra_body"] = {"enable_thinking": False}
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
         if tools:

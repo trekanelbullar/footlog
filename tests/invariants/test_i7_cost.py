@@ -99,7 +99,7 @@ def test_only_one_of_two_concurrent_calls_goes_through_when_budget_has_room_for_
         price=price,
     )
     worker_settings = worker_settings.model_copy(
-        update={"daily_cost_limit_usd": one_call_cost * 1.5}
+        update={"daily_cost_limit_usd": float(one_call_cost) * 1.5}
     )
     orca_client = _FakeOrcaClient()
     run = _insert_run(migrated_database_url)

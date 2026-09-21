@@ -12,6 +12,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import ROUND_CEILING, Decimal
 from functools import lru_cache
 from typing import Protocol
 from uuid import UUID
@@ -119,17 +120,27 @@ def _estimate_input_tokens_conservative(chars: int) -> int:
     return max(1, -(-chars // 2))  # ceil(chars / 2)
 
 
-def _cost_usd(*, input_tokens: int, output_max_tokens: int, price: pricing.ModelPrice) -> float:
-    return (input_tokens / 1_000_000) * price.input_per_million_usd + (
-        output_max_tokens / 1_000_000
-    ) * price.output_per_million_usd
+_USD_QUANTUM = Decimal("0.0000000001")
+
+
+def _cost_usd(*, input_tokens: int, output_max_tokens: int, price: pricing.ModelPrice) -> Decimal:
+    """USD の金額を、小数点以下10桁に切り上げた Decimal で返す。
+
+    DB の列は numeric。float のまま渡すと Postgres が浮動小数点で計算し、同じ額を
+    予約して精算してもゼロに戻らない（丸め誤差が残る）ため、Decimal で渡す。
+    """
+
+    cost = (Decimal(input_tokens) / 1_000_000) * Decimal(str(price.input_per_million_usd)) + (
+        Decimal(output_max_tokens) / 1_000_000
+    ) * Decimal(str(price.output_per_million_usd))
+    return cost.quantize(_USD_QUANTUM, rounding=ROUND_CEILING)
 
 
 def _reserve_budget(
     pool: ConnectionPool,
     *,
     today: date,
-    max_cost_usd: float,
+    max_cost_usd: Decimal,
     daily_limit_usd: float,
     alert_fn: AlertFn,
     worker_settings: WorkerSettings,
@@ -149,9 +160,9 @@ def _reserve_budget(
             "SELECT reserved_usd, spent_usd FROM daily_costs WHERE cost_date = %s FOR UPDATE",
             (today,),
         ).fetchone()
-        reserved_usd, spent_usd = float(row[0]), float(row[1])
+        reserved_usd, spent_usd = Decimal(row[0]), Decimal(row[1])
 
-        if spent_usd + reserved_usd + max_cost_usd > daily_limit_usd:
+        if spent_usd + reserved_usd + max_cost_usd > Decimal(str(daily_limit_usd)):
             exceeded = True
             inserted = conn.execute(
                 "INSERT INTO daily_cost_alerts (alert_date, notified) VALUES (%s, true) "
@@ -177,8 +188,8 @@ def _settle_budget_and_log(
     pool: ConnectionPool,
     *,
     today: date,
-    max_cost_usd: float,
-    actual_cost_usd: float,
+    max_cost_usd: Decimal,
+    actual_cost_usd: Decimal,
     run: RunContext,
     stage: Stage,
     model: str,
