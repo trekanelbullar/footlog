@@ -21,9 +21,10 @@ class UnknownModelPricingError(RuntimeError):
     """単価表に無いモデルを呼ぼうとしたことを表す。"""
 
 
-# 仮の値。実際の単価に合わせて更新（モデル提供元の公開単価がまだ確定していないため）。
 PRICING: dict[str, ModelPrice] = {
-    "qwen/qwen3.7-flash": ModelPrice(input_per_million_usd=0.20, output_per_million_usd=0.80),
+    # LLM ゲートウェイの管理画面の基本料金（2026-09-21 に確認）
+    "qwen/qwen3.7-flash": ModelPrice(input_per_million_usd=0.030, output_per_million_usd=0.130),
+    # 仮の値（使う予定なし）。使う前にゲートウェイの管理画面の単価に合わせる
     "openai/gpt-4.1-mini": ModelPrice(input_per_million_usd=0.40, output_per_million_usd=1.60),
 }
 
