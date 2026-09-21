@@ -1,10 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import type { AnchorHTMLAttributes, HTMLAttributes, LiHTMLAttributes, OlHTMLAttributes } from "react";
-import { compareIso, formatJst, linkFootnoteRefs, linkRejectedSimilarityRefs } from "@/lib/format";
-import type { ExcludeReason, NodeEvidenceEntry, ReportDetail } from "@/lib/worker-types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { compareIso, formatJst } from "@/lib/format";
+import {
+  ORIGIN_LABEL,
+  footnoteForNode,
+  isNewItem,
+  parseArticle,
+  pickHeadline,
+  type ArticleItem,
+  type ArticleSection,
+} from "@/lib/article";
+import type {
+  EventKind,
+  ExcludeReason,
+  NodeEvidenceEntry,
+  ReportDetail,
+} from "@/lib/worker-types";
+
+// レポート1本＝記事1本の体裁（2026-09-22 ユーザー指定）。カード・影・グラデーションは使わず、
+// 黒＋濃い赤、線と余白で区切る。本文の文は worker の Markdown を読み替えるだけで書き換えない。
 
 const REASON_LABEL: Record<ExcludeReason, string> = {
   private: "個人的な内容",
@@ -21,113 +37,269 @@ const KIND_LABEL: Record<string, string> = {
   status: "現在地",
 };
 
-const MERMAID_TIMEOUT_MS = 10000;
-
-function SafeLink({ href, children }: AnchorHTMLAttributes<HTMLAnchorElement>) {
-  // 脚注の印（linkFootnoteRefs が作る #fn-n）だけは、ページ内リンクとして上付きで出す。
-  if (href && /^#fn-\d+$/.test(href)) {
-    return (
-      <sup>
-        <a href={href} className="text-blue-600 hover:underline">
-          {children}
-        </a>
-      </sup>
-    );
-  }
-  // AD-10：linkRejectedSimilarityRefs が作る #evidence-E12 は、クリックで根拠パネルを開く
-  // ボタンとして出す（ページ遷移はしない）。実際の処理は onClick のイベント委譲で拾う。
-  const evidenceMatch = href?.match(/^#evidence-(E\d+)$/);
-  if (evidenceMatch) {
-    return (
-      <button type="button" data-evidence-node={evidenceMatch[1]} className="text-blue-600 underline hover:no-underline">
-        {children}
-      </button>
-    );
-  }
-  if (href && /^https?:\/\//i.test(href)) {
-    return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-        {children}
-      </a>
-    );
-  }
-  // http(s) 以外のリンクはリンクとして描画しない（design.md §7）。
-  return <span>{children}</span>;
-}
-
-// @tailwindcss/typography は §13 の承認済み依存に無いため追加せず、見出し・箇条書きだけ
-// 素の Tailwind ユーティリティで最低限読みやすくする。
-const MARKDOWN_COMPONENTS = {
-  a: SafeLink,
-  h1: (props: HTMLAttributes<HTMLHeadingElement>) => (
-    <h1 className="mb-2 mt-4 text-lg font-semibold first:mt-0" {...props} />
-  ),
-  h2: (props: HTMLAttributes<HTMLHeadingElement>) => (
-    <h2 className="mb-2 mt-4 text-base font-semibold first:mt-0" {...props} />
-  ),
-  h3: (props: HTMLAttributes<HTMLHeadingElement>) => (
-    <h3 className="mb-1 mt-3 text-sm font-semibold" {...props} />
-  ),
-  p: (props: HTMLAttributes<HTMLParagraphElement>) => <p className="mb-2 text-sm" {...props} />,
-  ul: (props: HTMLAttributes<HTMLUListElement>) => (
-    <ul className="mb-2 list-disc pl-5 text-sm" {...props} />
-  ),
-  ol: (props: OlHTMLAttributes<HTMLOListElement>) => (
-    <ol className="mb-2 list-decimal pl-5 text-sm" {...props} />
-  ),
-  li: (props: LiHTMLAttributes<HTMLLIElement>) => <li className="mb-1" {...props} />,
-  strong: (props: HTMLAttributes<HTMLElement>) => <strong className="font-semibold" {...props} />,
+// 図の形（worker の DSL）に合わせた、種類ごとの色。凡例と箇条書きの印にも同じものを使う。
+const KIND_STYLE: Record<
+  EventKind,
+  { classDef: string; glyph: string; glyphClass: string }
+> = {
+  decision: {
+    classDef: "fill:#141414,stroke:#141414,color:#fbf8f1",
+    glyph: "■",
+    glyphClass: "text-ink",
+  },
+  rejected_option: {
+    classDef: "fill:#fbf8f1,stroke:#9b1c1c,color:#9b1c1c,stroke-dasharray:4 3",
+    glyph: "⬡",
+    glyphClass: "text-accent",
+  },
+  open_issue: {
+    classDef: "fill:#fbf8f1,stroke:#141414,color:#141414,stroke-width:2px",
+    glyph: "▱",
+    glyphClass: "text-ink",
+  },
+  finding: {
+    classDef: "fill:#ece5d6,stroke:#ece5d6,color:#141414",
+    glyph: "●",
+    glyphClass: "text-[#8a8375]",
+  },
+  status: {
+    classDef: "fill:#fbf8f1,stroke:#8a8375,color:#4a463f",
+    glyph: "▶",
+    glyphClass: "text-[#8a8375]",
+  },
 };
 
-function EvidencePanel({ label, items }: { label: string; items: NodeEvidenceEntry[] }) {
+const MERMAID_TIMEOUT_MS = 10000;
+
+/** 指定した要素まで移動し、一瞬だけ色を付ける。 */
+function jumpTo(id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.remove("flash");
+  void el.offsetWidth; // アニメーションを最初からやり直す
+  el.classList.add("flash");
+}
+
+/** worker の DSL（flowchart TD）を、横長の時系列にして、種類ごとの色を付ける。 */
+function styledDsl(dsl: string, report: ReportDetail): string {
+  const lr = dsl.replace(/^flowchart TD\b/, "flowchart LR");
+  const present = new Set(
+    [...lr.matchAll(/^\s*(E\d+)[[({>/]/gm)].map((m) => m[1]),
+  );
+  const byKind = new Map<EventKind, string[]>();
+  for (const t of report.timeline) {
+    const id = `E${t.event_no}`;
+    if (!present.has(id)) continue;
+    byKind.set(t.kind, [...(byKind.get(t.kind) ?? []), id]);
+  }
+  const lines = [lr.trimEnd()];
+  for (const [kind, ids] of byKind) {
+    lines.push(`  classDef k_${kind} ${KIND_STYLE[kind].classDef}`);
+    lines.push(`  class ${ids.join(",")} k_${kind}`);
+  }
+  return lines.join("\n");
+}
+
+function Kicker({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded border bg-white p-4">
-      <h3 className="mb-2 text-sm font-semibold">根拠：{label}</h3>
-      {items.length === 0 ? (
-        <p className="text-sm text-gray-500">根拠が見つかりませんでした。</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {items.map((item, i) => (
-            <li key={`${item.label}-${i}`} className="text-sm">
-              <p className="mb-1 text-xs text-gray-500">{item.label}</p>
-              {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
-              <p className="whitespace-pre-wrap break-words rounded bg-gray-50 p-2 font-mono text-xs">
-                {item.text}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <p className="font-sans-jp text-[11px] font-bold tracking-[0.25em] text-accent">
+      {children}
+    </p>
   );
 }
 
-export default function ReportViewer({ report }: { report: ReportDetail }) {
-  const [selected, setSelected] = useState<{ label: string; items: NodeEvidenceEntry[] } | null>(null);
-  // 図は縦に長く読みにくいため、レポート内では時系列の一覧を出し、Mermaid の図は
-  // 「図を大きく開く」で画面いっぱいに横向きで描く（2026-09-22 ユーザー合意）。
-  // mermaid_dsl が無い版（withheld・null）では開くボタンを出さない。
-  const hasDiagram = Boolean(report.mermaid_dsl?.trim());
-  const [diagramOpen, setDiagramOpen] = useState(false);
-  const [diagramState, setDiagramState] = useState<"loading" | "ok" | "failed">("loading");
+function OriginTagView({ item }: { item: ArticleItem }) {
+  if (!item.origin) return null;
+  const amber = item.origin === "ai_unverified";
+  return (
+    <span
+      className={`ml-2 inline-block border px-1.5 py-px align-middle text-[10px] font-medium tracking-wide ${
+        amber
+          ? "border-amber bg-[#fdf3dc] text-amber"
+          : "border-rule text-[#6b655a]"
+      }`}
+    >
+      {ORIGIN_LABEL[item.origin]}
+    </span>
+  );
+}
+
+function FootnoteRefs({ numbers }: { numbers: number[] }) {
+  if (numbers.length === 0) return null;
+  return (
+    <sup className="ml-0.5">
+      {numbers.map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => jumpTo(`fn-${n}`)}
+          className="mx-0.5 font-sans-jp text-[11px] font-bold text-accent hover:underline"
+        >
+          ［{n}］
+        </button>
+      ))}
+    </sup>
+  );
+}
+
+/** 根拠の原文。1件目は雑誌のプルクオートのように大きく、2件目以降は小さく添える（原文は一字一句そのまま、I2）。 */
+function PullQuote({ n, report }: { n: number; report: ReportDetail }) {
+  const entries = report.footnotes[String(n)] ?? [];
+  if (entries.length === 0) return null;
+  const [first, ...rest] = entries;
+  const size =
+    first.text.length <= 50
+      ? "text-2xl md:text-3xl"
+      : first.text.length <= 120
+        ? "text-xl md:text-2xl"
+        : "text-lg";
+  return (
+    <figure
+      id={`fn-${n}`}
+      className="my-8 scroll-mt-24 border-l-4 border-accent py-1 pl-5 md:pl-7"
+    >
+      <blockquote
+        className={`whitespace-pre-wrap break-words font-serif-jp font-bold leading-snug text-ink ${size}`}
+      >
+        {first.text}
+      </blockquote>
+      <figcaption className="mt-3 font-sans-jp text-xs text-[#6b655a]">
+        <span className="font-bold text-accent">［{n}］</span> 原文{" "}
+        {first.label}・S{first.source_no}・{first.speaker ?? "不明"}・
+        {formatJst(first.recorded_at)}
+      </figcaption>
+      {rest.map((entry, i) => (
+        <div
+          key={`${entry.label}-${i}`}
+          className="mt-3 border-t border-rule pt-2"
+        >
+          <p className="whitespace-pre-wrap break-words font-sans-jp text-sm text-ink">
+            {entry.text}
+          </p>
+          <p className="mt-1 font-sans-jp text-[11px] text-[#6b655a]">
+            原文 {entry.label}・S{entry.source_no}・{entry.speaker ?? "不明"}・
+            {formatJst(entry.recorded_at)}
+          </p>
+        </div>
+      ))}
+    </figure>
+  );
+}
+
+function ArticleParagraph({
+  item,
+  isNew,
+  quotes,
+  report,
+}: {
+  item: ArticleItem;
+  isNew: boolean;
+  quotes: number[];
+  report: ReportDetail;
+}) {
+  return (
+    <>
+      <p className="font-sans-jp text-[17px] leading-[1.95] text-ink">
+        {isNew && (
+          <span className="mr-2 inline-block bg-accent px-1.5 py-px align-middle text-[10px] font-bold tracking-widest text-white">
+            NEW
+          </span>
+        )}
+        {item.text}
+        {item.unresolvedReason && (
+          <span className="ml-1 text-sm text-amber">
+            （理由は未確認：担当者に確認中）
+          </span>
+        )}
+        <OriginTagView item={item} />
+        {item.similarRejected.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => jumpTo(`ev-${id}`)}
+            className="ml-2 inline-block border border-accent px-1.5 py-px align-middle text-[10px] font-bold text-accent"
+          >
+            過去の却下案 {id} と類似
+          </button>
+        ))}
+        <FootnoteRefs numbers={item.footnotes} />
+      </p>
+      {quotes.map((n) => (
+        <PullQuote key={n} n={n} report={report} />
+      ))}
+    </>
+  );
+}
+
+function EvidenceQuotes({ items }: { items: NodeEvidenceEntry[] }) {
+  if (items.length === 0)
+    return (
+      <p className="font-sans-jp text-sm text-[#6b655a]">
+        根拠が見つかりませんでした。
+      </p>
+    );
+  return (
+    <>
+      {items.map((item, i) => (
+        <blockquote key={`${item.label}-${i}`} className="mb-3 last:mb-0">
+          {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
+          <p className="whitespace-pre-wrap break-words font-serif-jp text-lg font-bold leading-snug text-ink">
+            {item.text}
+          </p>
+          <p className="mt-1 font-sans-jp text-[11px] text-[#6b655a]">
+            原文 {item.label}
+          </p>
+        </blockquote>
+      ))}
+    </>
+  );
+}
+
+export default function ReportViewer({
+  report,
+  projectName,
+  newEventNos,
+  toolbar,
+}: {
+  report: ReportDetail;
+  projectName: string;
+  newEventNos: number[];
+  toolbar?: ReactNode;
+}) {
+  const [diagramState, setDiagramState] = useState<"loading" | "ok" | "failed">(
+    () => (report.mermaid_dsl?.trim() ? "loading" : "failed"),
+  );
   const [svg, setSvg] = useState<string>("");
+  const [figureNode, setFigureNode] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!diagramOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDiagramOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [diagramOpen]);
+  const fresh = useMemo(() => new Set(newEventNos), [newEventNos]);
+  const sections = useMemo(
+    () => parseArticle(report.body_markdown),
+    [report.body_markdown],
+  );
+  const headline = useMemo(
+    () => pickHeadline(report.timeline, fresh),
+    [report.timeline, fresh],
+  );
+
+  // 図のノード（またはその代わりの箇条書き）を押したとき：同じ原文を引く脚注の引用へ移動する。
+  // 本文で引いていない出来事なら、図の下の欄に根拠を出してそこへ移動する。
+  function openNode(nodeId: string) {
+    const n = footnoteForNode(report, nodeId);
+    if (n !== null && document.getElementById(`fn-${n}`)) {
+      jumpTo(`fn-${n}`);
+      return;
+    }
+    setFigureNode(nodeId);
+    requestAnimationFrame(() => jumpTo("figure-evidence"));
+  }
 
   useEffect(() => {
-    // 開いたときだけ描く。worker の DSL は flowchart TD なので、横長の画面に合わせて LR にする。
-    const dsl = report.mermaid_dsl?.replace(/^flowchart TD\b/, "flowchart LR");
-    if (!diagramOpen || !dsl?.trim() || svg) return;
+    const dsl = report.mermaid_dsl;
+    if (!dsl?.trim()) return;
     let cancelled = false;
-
     const timeoutId = setTimeout(() => {
       if (!cancelled) setDiagramState("failed");
     }, MERMAID_TIMEOUT_MS);
@@ -135,11 +307,23 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
     (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
-        // 横に長い時系列を枠に合わせて縮めると読めない大きさになるため、元の大きさで描いて
-        // 横にスクロールさせる（useMaxWidth: false）。
-        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", flowchart: { useMaxWidth: false } });
+        // 横に長い時系列は枠に合わせて縮めると読めないため、元の大きさで描いて横にスクロールさせる。
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+          theme: "base",
+          themeVariables: {
+            fontFamily: "var(--font-noto-sans-jp), sans-serif",
+            fontSize: "14px",
+            lineColor: "#141414",
+            primaryColor: "#fbf8f1",
+            primaryTextColor: "#141414",
+            primaryBorderColor: "#141414",
+          },
+          flowchart: { useMaxWidth: false },
+        });
         const id = `mermaid-v${report.version_no}-${Math.random().toString(36).slice(2, 8)}`;
-        const result = await mermaid.render(id, dsl);
+        const result = await mermaid.render(id, styledDsl(dsl, report));
         clearTimeout(timeoutId);
         if (!cancelled) {
           setSvg(result.svg);
@@ -155,215 +339,362 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [diagramOpen, svg, report.mermaid_dsl, report.version_no]);
+    // report 全体ではなく、図に効く値だけで描き直す
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report.mermaid_dsl, report.version_no]);
 
   useEffect(() => {
-    if (!diagramOpen || diagramState !== "ok" || !containerRef.current) return;
+    if (diagramState !== "ok" || !containerRef.current) return;
     const container = containerRef.current;
-    // 開いたときは最新（右端）を見せる。
+    // 最新（右端）から見せる。
     const scroller = container.parentElement;
     if (scroller) scroller.scrollLeft = scroller.scrollWidth;
     const cleanups: (() => void)[] = [];
-
     for (const nodeId of Object.keys(report.node_evidence)) {
-      const matches = container.querySelectorAll(`[id*="${nodeId}"]`);
-      matches.forEach((el) => {
-        const handler = () => setSelected({ label: nodeId, items: report.node_evidence[nodeId] });
+      container.querySelectorAll(`[id*="${nodeId}"]`).forEach((el) => {
+        // E1 が E12 にも当たらないよう、id の末尾の区切りまで確かめる。
+        if (!new RegExp(`(^|-)${nodeId}(-|$)`).test(el.id)) return;
+        const handler = () => openNode(nodeId);
         el.addEventListener("click", handler);
-        el.addEventListener("pointerup", handler);
         (el as HTMLElement).style.cursor = "pointer";
-        cleanups.push(() => {
-          el.removeEventListener("click", handler);
-          el.removeEventListener("pointerup", handler);
-        });
+        cleanups.push(() => el.removeEventListener("click", handler));
       });
     }
     return () => cleanups.forEach((c) => c());
-  }, [diagramOpen, diagramState, report.node_evidence]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diagramState, report.node_evidence]);
 
   if (report.withheld) {
     return (
-      <div className="rounded border bg-amber-50 p-6 text-sm text-amber-900">
+      <div className="border-y-2 border-ink bg-paper px-6 py-10 font-sans-jp text-sm text-ink">
         この版には非公開になった情報が含まれるため表示できません。次の実行で作り直されます。
       </div>
     );
   }
 
-  // withheld のとき worker は flags を {} で返す（§5.6 は未規定）。ここでは
-  // withheld=false の場合しか通らないが、型は Partial のため既定値で補う。
   const suspectedInjection = report.flags.suspected_injection ?? [];
   const unverifiedAiCount = report.flags.unverified_ai_count ?? 0;
-  // AD-10：任意の項目。無ければ警告なし。
-  const rejectedSimilarityCount = report.flags.rejected_similarity?.length ?? 0;
+  const rejectedSimilarity = report.flags.rejected_similarity ?? [];
 
-  function openEvidenceFromBody(e: React.MouseEvent<HTMLElement>) {
-    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-evidence-node]");
-    if (!target) return;
-    const nodeId = target.dataset.evidenceNode;
-    if (!nodeId) return;
-    setSelected({ label: nodeId, items: report.node_evidence[nodeId] ?? [] });
-  }
+  const rejectedSection = sections.find((s) => s.kind === "rejected");
+  const statusSection = sections.find((s) => s.kind === "status");
+  const mainSections = sections.filter((s) => s.kind !== "rejected");
+  const lead = statusSection?.items[0]?.text ?? null;
+
+  // 各脚注の引用は、本文で最初に出てきた項目の直後に1度だけ置く。
+  const quoted = new Set<number>();
+  const quotesFor = (item: ArticleItem) => {
+    const list = item.footnotes.filter((n) => !quoted.has(n));
+    list.forEach((n) => quoted.add(n));
+    return list;
+  };
+
+  const sortedTimeline = [...report.timeline].sort((a, b) =>
+    compareIso(a.occurred_at, b.occurred_at),
+  );
+  const quoteCount = Object.keys(report.footnotes).length;
+
+  const renderSection = (section: ArticleSection) => (
+    <section key={section.heading} className="border-t border-ink pt-8">
+      <Kicker>{section.label}</Kicker>
+      <h2 className="mt-2 mb-6 font-serif-jp text-2xl font-black leading-tight text-ink md:text-3xl">
+        {section.heading}
+      </h2>
+      {section.items.length === 0 ? (
+        <p className="font-sans-jp text-sm text-[#6b655a]">
+          該当する出来事はありません。
+        </p>
+      ) : (
+        <div className="flex flex-col gap-5">
+          {section.items.map((item, i) => (
+            <ArticleParagraph
+              key={i}
+              item={item}
+              isNew={isNewItem(item, report, fresh)}
+              quotes={quotesFor(item)}
+              report={report}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
-        <span>生成日時：{formatJst(report.generated_at)}</span>
-        <span>判定：{report.judge_status === "pass" ? "合格" : "要確認"}</span>
-        <span>未確認の件数：{unverifiedAiCount}</span>
-        <span>過去に却下した案と類似：{rejectedSimilarityCount}件</span>
-      </div>
+    <article className="bg-paper font-sans-jp text-ink">
+      {/* ヒーロー */}
+      <header className="border-b-2 border-ink px-5 pt-10 pb-8 md:px-12 md:pt-14">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Kicker>決定ログ ／ {projectName}</Kicker>
+            {toolbar}
+          </div>
+          <h1 className="mt-6 max-w-4xl break-words font-serif-jp text-[2rem] font-black leading-[1.25] text-ink md:text-6xl md:leading-[1.15]">
+            {headline ? headline.summary : `${projectName} の記録`}
+          </h1>
+          {lead && (
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#3a3731]">
+              {lead}
+            </p>
+          )}
+          <p className="mt-6 flex flex-wrap gap-x-5 gap-y-1 border-t border-rule pt-3 text-xs tracking-wide text-[#6b655a]">
+            <span>{formatJst(report.generated_at)}</span>
+            <span>
+              第{report.version_no}版
+              {report.audience === "managers" ? "（管理者向け）" : ""}
+            </span>
+            <span
+              className={unverifiedAiCount > 0 ? "font-bold text-amber" : ""}
+            >
+              未確認 {unverifiedAiCount}件
+            </span>
+            <span
+              className={
+                report.judge_status === "pass" ? "" : "font-bold text-accent"
+              }
+            >
+              検査 {report.judge_status === "pass" ? "合格" : "要確認"}
+            </span>
+            {fresh.size > 0 && (
+              <span className="font-bold text-accent">NEW {fresh.size}件</span>
+            )}
+          </p>
+        </div>
+      </header>
 
-      {suspectedInjection.length > 0 && (
-        <div className="rounded bg-red-50 p-3 text-sm text-red-800">
-          <p className="font-medium">誘導の疑いのある記述を検出</p>
-          <p className="mt-1 text-xs">対象：{suspectedInjection.join("、")}</p>
+      {(suspectedInjection.length > 0 || report.excluded_summary) && (
+        <div className="mx-auto max-w-6xl px-5 md:px-12">
+          {suspectedInjection.length > 0 && (
+            <p className="mt-6 border-y border-accent py-2 text-sm text-accent">
+              <span className="font-bold">誘導の疑いのある記述を検出</span>
+              　対象：{suspectedInjection.join("、")}
+            </p>
+          )}
+          {report.excluded_summary && (
+            <p className="mt-4 text-xs text-[#6b655a]">
+              除外されたソース {report.excluded_summary.count}件（
+              {Object.entries(REASON_LABEL)
+                .map(
+                  ([reason, label]) =>
+                    `${label} ${report.excluded_summary!.by_reason[reason as ExcludeReason] ?? 0}`,
+                )
+                .join("・")}
+              ）
+            </p>
+          )}
         </div>
       )}
 
-      {report.excluded_summary && (
-        <div className="rounded bg-amber-50 p-3 text-sm text-amber-800">
-          <p className="font-medium">除外されたソース：{report.excluded_summary.count}件</p>
-          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-            {Object.entries(REASON_LABEL).map(([reason, label]) => (
-              <li key={reason}>
-                {label}：{report.excluded_summary!.by_reason[reason as ExcludeReason] ?? 0}件
+      <div className="mx-auto flex max-w-[44rem] flex-col gap-12 px-5 py-12 md:px-0">
+        {mainSections
+          .filter(
+            (s) =>
+              s.kind === "decision" ||
+              s.kind === "reason" ||
+              s.kind === "other",
+          )
+          .map(renderSection)}
+
+        {/* 却下案の囲み記事 */}
+        <aside className="border-2 border-ink bg-white">
+          {rejectedSimilarity.length > 0 && (
+            <div className="bg-accent px-5 py-2 text-sm font-bold text-white">
+              再浮上の警告：
+              {rejectedSimilarity.map((f, i) => (
+                <button
+                  key={`${f.event_no}-${f.rejected_event_no}`}
+                  type="button"
+                  onClick={() => jumpTo(`ev-E${f.rejected_event_no}`)}
+                  className="underline decoration-white/60 underline-offset-2 hover:decoration-white"
+                >
+                  {i > 0 ? "、" : ""}E{f.event_no} は過去に却下した E
+                  {f.rejected_event_no} と似ています
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="px-5 py-6 md:px-7">
+            <Kicker>REJECTED</Kicker>
+            <h2 className="mt-2 mb-4 font-serif-jp text-xl font-black text-ink">
+              {rejectedSection?.heading ?? "検討したが採用しなかった選択肢"}
+            </h2>
+            {!rejectedSection || rejectedSection.items.length === 0 ? (
+              <p className="text-sm text-[#6b655a]">
+                この版で却下した案はありません。
+              </p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {rejectedSection.items.map((item, i) => (
+                  <ArticleParagraph
+                    key={i}
+                    item={item}
+                    isNew={isNewItem(item, report, fresh)}
+                    quotes={quotesFor(item)}
+                    report={report}
+                  />
+                ))}
+              </div>
+            )}
+            {rejectedSimilarity.length > 0 && (
+              <div className="mt-6 border-t border-rule pt-4">
+                <p className="mb-3 text-[11px] font-bold tracking-[0.2em] text-accent">
+                  元の却下案
+                </p>
+                {[
+                  ...new Set(
+                    rejectedSimilarity.map((f) => f.rejected_event_no),
+                  ),
+                ].map((no) => (
+                  <div
+                    key={no}
+                    id={`ev-E${no}`}
+                    className="mb-4 scroll-mt-24 border-l-4 border-accent pl-4"
+                  >
+                    <p className="mb-1 text-xs text-[#6b655a]">E{no}</p>
+                    <EvidenceQuotes
+                      items={report.node_evidence[`E${no}`] ?? []}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {mainSections
+          .filter((s) => s.kind === "open" || s.kind === "status")
+          .map(renderSection)}
+      </div>
+
+      {/* 図：ページ幅いっぱいのインフォグラフィック */}
+      <figure className="border-y-2 border-ink bg-white">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-6 md:px-12">
+          <div>
+            <Kicker>TIMELINE</Kicker>
+            <p className="mt-1 font-serif-jp text-xl font-black">決定の流れ</p>
+          </div>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#6b655a]">
+            {(Object.keys(KIND_STYLE) as EventKind[]).map((kind) => (
+              <li key={kind}>
+                <span className={`mr-1 ${KIND_STYLE[kind].glyphClass}`}>
+                  {KIND_STYLE[kind].glyph}
+                </span>
+                {KIND_LABEL[kind]}
               </li>
             ))}
           </ul>
         </div>
-      )}
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="flex flex-col gap-6">
-          <article className="rounded border bg-white p-4" onClick={openEvidenceFromBody}>
-            <ReactMarkdown components={MARKDOWN_COMPONENTS}>
-              {linkRejectedSimilarityRefs(linkFootnoteRefs(report.body_markdown))}
-            </ReactMarkdown>
-          </article>
-
-          <section className="rounded border bg-white p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">図（時系列）</h2>
-              {hasDiagram && (
-                <button
-                  type="button"
-                  onClick={() => setDiagramOpen(true)}
-                  className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
-                >
-                  図を大きく開く
-                </button>
-              )}
-            </div>
-            {report.timeline.length === 0 ? (
-              <p className="text-sm text-gray-500">表示できる項目がありません。</p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {[...report.timeline]
-                  .sort((a, b) => compareIso(a.occurred_at, b.occurred_at))
-                  .map((item) => {
-                    const nodeId = `E${item.event_no}`;
-                    return (
-                      <li key={item.event_no}>
-                        <button
-                          type="button"
-                          onClick={() => setSelected({ label: nodeId, items: report.node_evidence[nodeId] ?? [] })}
-                          className="w-full rounded border px-3 py-2 text-left text-sm hover:bg-gray-50"
-                        >
-                          <span className="text-gray-500">{formatJst(item.occurred_at)}</span>
-                          {" ・ "}
-                          <span className="text-gray-500">{KIND_LABEL[item.kind] ?? item.kind}</span>
-                          {" ・ "}
-                          <span>{item.summary}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-              </ul>
+        {diagramState !== "failed" ? (
+          <div className="mt-4 overflow-x-auto px-5 pb-4 md:px-12">
+            {diagramState === "loading" && (
+              <p className="py-10 text-sm text-[#6b655a]">図を組んでいます…</p>
             )}
-          </section>
-
-          <section className="rounded border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold">脚注</h2>
-            {Object.keys(report.footnotes).length === 0 ? (
-              <p className="text-sm text-gray-500">脚注はありません。</p>
-            ) : (
-              <ol className="flex flex-col gap-3">
-                {Object.entries(report.footnotes)
-                  .sort(([a], [b]) => Number(a) - Number(b))
-                  .map(([n, entries]) => (
-                    <li key={n} id={`fn-${n}`} className="scroll-mt-4 text-sm">
-                      <p className="mb-1 text-xs text-gray-500">［{n}］</p>
-                      {entries.map((entry, i) => (
-                        <div key={`${entry.label}-${i}`} className="mb-1 rounded bg-gray-50 p-2">
-                          <p className="text-xs text-gray-500">
-                            {entry.label}（S{entry.source_no}・{entry.speaker ?? "不明"}・{formatJst(entry.recorded_at)}）
-                          </p>
-                          {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
-                          <p className="whitespace-pre-wrap break-words font-mono text-xs">{entry.text}</p>
-                        </div>
-                      ))}
-                    </li>
-                  ))}
-              </ol>
+            {diagramState === "ok" && (
+              // mermaid.render の出力（securityLevel: "strict"）を描画する。
+              <div
+                ref={containerRef}
+                className="w-max"
+                dangerouslySetInnerHTML={{ __html: svg }}
+              />
             )}
-          </section>
-        </div>
-
-        {diagramOpen && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="図"
-            className="fixed inset-0 z-50 flex flex-col bg-black/50 p-2 sm:p-6"
-            onClick={() => setDiagramOpen(false)}
-          >
-            <div
-              className="flex min-h-0 flex-1 flex-col rounded bg-white p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold">図（ノードを押すと根拠の原文が出ます）</h2>
-                <button
-                  type="button"
-                  onClick={() => setDiagramOpen(false)}
-                  className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
-                >
-                  閉じる
-                </button>
-              </div>
-              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[3fr_1fr]">
-                <div className="min-h-0 overflow-auto">
-                  {diagramState === "loading" && <p className="text-sm text-gray-500">図を描画しています…</p>}
-                  {diagramState === "ok" && (
-                    // mermaid.render の出力（securityLevel: "strict"）を描画する。
-                    <div ref={containerRef} dangerouslySetInnerHTML={{ __html: svg }} />
-                  )}
-                  {diagramState === "failed" && (
-                    <p className="text-sm text-gray-600">図を表示できませんでした。レポートの一覧をご覧ください。</p>
-                  )}
-                </div>
-                <div className="min-h-0 overflow-auto">
-                  {selected ? (
-                    <EvidencePanel label={selected.label} items={selected.items} />
-                  ) : (
-                    <p className="text-sm text-gray-500">ノードを押すと、根拠の原文がここに表示されます。</p>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
+        ) : report.timeline.length === 0 ? (
+          <p className="px-5 py-8 text-sm text-[#6b655a] md:px-12">
+            表示できる出来事がありません。
+          </p>
+        ) : (
+          <ol className="mt-4 px-5 pb-4 md:px-12">
+            {sortedTimeline.map((item) => (
+              <li
+                key={item.event_no}
+                className="border-t border-rule first:border-t-0"
+              >
+                <button
+                  type="button"
+                  onClick={() => openNode(`E${item.event_no}`)}
+                  className="grid w-full grid-cols-[1.25rem_1fr] gap-x-3 py-3 text-left md:grid-cols-[1.25rem_9rem_1fr]"
+                >
+                  <span
+                    className={`${KIND_STYLE[item.kind]?.glyphClass ?? ""} text-lg leading-6`}
+                  >
+                    {KIND_STYLE[item.kind]?.glyph ?? "・"}
+                  </span>
+                  <span className="text-xs leading-6 text-[#6b655a] md:text-sm">
+                    {formatJst(item.occurred_at)} ・{" "}
+                    {KIND_LABEL[item.kind] ?? item.kind}
+                    {fresh.has(item.event_no) && (
+                      <span className="ml-2 font-bold text-accent">NEW</span>
+                    )}
+                  </span>
+                  <span className="col-start-2 text-[15px] leading-relaxed md:col-start-3">
+                    {item.summary}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
         )}
 
-        <div className="lg:sticky lg:top-4 lg:self-start">
-          {selected ? (
-            <EvidencePanel label={selected.label} items={selected.items} />
-          ) : (
-            <div className="rounded border bg-white p-4 text-sm text-gray-500">
-              一覧の項目や図のノードを選ぶと、根拠の原文がここに表示されます。
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+        <figcaption className="border-t border-rule px-5 py-3 text-xs leading-relaxed text-[#6b655a] md:px-12">
+          図　この版までの出来事を、左から古い順に並べたもの（
+          {report.timeline.length}件）。
+          形と色は出来事の種類を表す。項目を押すと、その根拠の原文へ移動する。
+        </figcaption>
+
+        {figureNode && (
+          <div
+            id="figure-evidence"
+            className="scroll-mt-24 border-t border-ink px-5 py-6 md:px-12"
+          >
+            <p className="mb-3 text-[11px] font-bold tracking-[0.2em] text-accent">
+              根拠 {figureNode}
+            </p>
+            <EvidenceQuotes items={report.node_evidence[figureNode] ?? []} />
+          </div>
+        )}
+      </figure>
+
+      {/* 奥付 */}
+      <footer className="mx-auto max-w-6xl px-5 py-8 md:px-12">
+        <p className="mb-3 text-[11px] font-bold tracking-[0.25em] text-ink">
+          奥付
+        </p>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-[#6b655a] md:grid-cols-4">
+          <div>
+            <dt className="inline">版　</dt>
+            <dd className="inline">第{report.version_no}版</dd>
+          </div>
+          <div>
+            <dt className="inline">組版　</dt>
+            <dd className="inline">{formatJst(report.generated_at)}</dd>
+          </div>
+          <div>
+            <dt className="inline">読者　</dt>
+            <dd className="inline">
+              {report.audience === "managers" ? "管理者" : "全員"}
+            </dd>
+          </div>
+          <div>
+            <dt className="inline">検査　</dt>
+            <dd className="inline">
+              {report.judge_status === "pass" ? "合格" : "要確認"}
+            </dd>
+          </div>
+          <div>
+            <dt className="inline">引用　</dt>
+            <dd className="inline">{quoteCount}件</dd>
+          </div>
+          <div>
+            <dt className="inline">出来事　</dt>
+            <dd className="inline">{report.timeline.length}件</dd>
+          </div>
+          <div>
+            <dt className="inline">未確認　</dt>
+            <dd className="inline">{unverifiedAiCount}件</dd>
+          </div>
+        </dl>
+      </footer>
+    </article>
   );
 }

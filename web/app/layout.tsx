@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Noto_Sans_JP,
+  Noto_Serif_JP,
+} from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
@@ -15,6 +20,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// 記事の体裁（レポート・トップ）で使う和文書体。見出しは明朝の太字、本文はゴシック。
+const notoSerifJp = Noto_Serif_JP({
+  variable: "--font-noto-serif-jp",
+  weight: ["700", "900"],
+  subsets: ["latin"],
+  preload: false,
+});
+
+const notoSansJp = Noto_Sans_JP({
+  variable: "--font-noto-sans-jp",
+  weight: ["400", "500", "700"],
+  subsets: ["latin"],
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: "決定ログ",
   description: "プロジェクトの意思決定と根拠を自動で追跡するツール",
@@ -26,23 +46,25 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${notoSerifJp.variable} ${notoSansJp.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
         <header className="border-b bg-white">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-            <Link href="/projects" className="font-semibold">
+            <Link href="/projects" className="whitespace-nowrap font-semibold">
               決定ログ
             </Link>
             {session ? (
-              <nav className="flex items-center gap-4 text-sm">
+              <nav className="flex items-center gap-4 whitespace-nowrap text-sm">
                 <Link href="/projects" className="hover:underline">
                   プロジェクト
                 </Link>
                 <Link href="/notifications" className="hover:underline">
                   通知
                 </Link>
-                <span className="text-gray-500">{session.email}</span>
+                <span className="hidden text-gray-500 sm:inline">
+                  {session.email}
+                </span>
                 <LogoutButton />
               </nav>
             ) : (
@@ -54,7 +76,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             )}
           </div>
         </header>
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+          {children}
+        </main>
       </body>
     </html>
   );

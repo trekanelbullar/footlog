@@ -15,10 +15,10 @@ export default function VersionSwitcher({
   const router = useRouter();
 
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className="flex items-center gap-2 font-sans-jp text-xs tracking-wide text-[#6b655a]">
       版
       <select
-        className="rounded border px-2 py-1"
+        className="border-b border-ink bg-transparent px-1 py-0.5 text-ink"
         value={currentVersion}
         onChange={(e) => router.push(`/projects/${pid}/reports/${e.target.value}`)}
       >
