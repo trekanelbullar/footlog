@@ -216,3 +216,29 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- Project additions ----
+# Env files (keep template tracked)
+.env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# Credentials
+*credentials*.json
+*service-account*.json
+
+# Claude Code (local only)
+.claude/settings.local.json
+
+# Design chat logs
+design/**/context-chat.md
