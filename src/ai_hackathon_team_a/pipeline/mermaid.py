@@ -53,9 +53,15 @@ class MermaidEvent:
 
 
 def build_mermaid(events: list[MermaidEvent]) -> str:
-    """``events`` から ``flowchart TD`` の Mermaid DSL を組み立てる。"""
+    """``events`` から ``flowchart TD`` の Mermaid DSL を組み立てる。
 
-    ordered = sorted(events, key=lambda e: e.occurred_at)
+    出来事を ``occurred_at`` の古い順（同じ時刻なら ``event_no`` の順）に並べ、
+    隣どうしを実線の矢印でつないで縦の時系列にする。ノード同士がつながっていない
+    と、`flowchart TD` でも見た目は横一列に並んでしまうため（Mermaid はノードの
+    向きを辺から決める）。supersedes は今どおり点線でつなぐ。
+    """
+
+    ordered = sorted(events, key=lambda e: (e.occurred_at, e.event_no))
     present_event_nos = {e.event_no for e in ordered}
 
     lines = ["flowchart TD"]
@@ -63,6 +69,9 @@ def build_mermaid(events: list[MermaidEvent]) -> str:
         open_bracket, close_bracket = _SHAPE_BY_KIND[event.kind]
         label = _sanitize_label(event.summary)
         lines.append(f"  E{event.event_no}{open_bracket}{label}{close_bracket}")
+
+    for earlier, later in zip(ordered, ordered[1:], strict=False):
+        lines.append(f"  E{earlier.event_no} --> E{later.event_no}")
 
     for event in ordered:
         if event.supersedes_event_no is not None and event.supersedes_event_no in present_event_nos:

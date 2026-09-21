@@ -237,6 +237,71 @@ def test_outcome_cost_limited(migrated_database_url: str, worker_settings) -> No
     assert (status, db_outcome) == ("failed", "cost_limited")
 
 
+def test_failed_assembly_does_not_burn_version_no(
+    migrated_database_url: str, worker_settings
+) -> None:
+    """組み立ての途中で失敗した実行は ``next_version_no`` を進めない（設計書 §5.3）。
+
+    版の番号は、レポートを保存するトランザクションの中で払い出す。保存が失敗した
+    実行（ロールバック）は番号を使わないので、次に成功した実行が版1になる。
+    """
+
+    with psycopg.connect(migrated_database_url) as conn:
+        project_id = conn.execute(
+            "INSERT INTO projects (name, goal_description, needs_rebuild) "
+            "VALUES ('P', 'G', true) RETURNING id"
+        ).fetchone()[0]
+        conn.commit()
+
+    def _raise_on_assemble(stage: str, messages, *, run, json_mode=False, tools=None):
+        assert stage == "ASSEMBLE"  # 出来事・区切りが無いので他の段階は呼ばれない
+        raise RuntimeError("boom")
+
+    run_id_1 = _insert_queued_run(migrated_database_url, project_id)
+    pool = ConnectionPool(migrated_database_url)
+
+    first = run_module.execute_run(
+        run_id_1, worker_settings=worker_settings, pool=pool, llm_call=_raise_on_assemble
+    )
+
+    assert first.outcome == "failed"
+    with psycopg.connect(migrated_database_url) as conn:
+        next_version_no, report_count = conn.execute(
+            "SELECT next_version_no, "
+            "(SELECT COUNT(*) FROM reports WHERE project_id = projects.id) "
+            "FROM projects WHERE id = %s",
+            (project_id,),
+        ).fetchone()
+    assert next_version_no == 1  # 失敗した実行は番号を使っていない
+    assert report_count == 0
+
+    _FAKE_ASSEMBLE_EMPTY = json.dumps(
+        {
+            "sections": {"purpose": [], "current_state": [], "direction": []},
+            "summary_for_mail": "空の要約",
+        }
+    )
+
+    def _succeeding_llm(stage: str, messages, *, run, json_mode=False, tools=None) -> LlmResult:
+        text = {"ASSEMBLE": _FAKE_ASSEMBLE_EMPTY, "JUDGE": _FAKE_JUDGE}[stage]
+        return LlmResult(
+            text=text,
+            tool_calls=None,
+            input_tokens=10,
+            output_tokens=10,
+            model="fake",
+            estimated=True,
+        )
+
+    run_id_2 = _insert_queued_run(migrated_database_url, project_id)
+    second = run_module.execute_run(
+        run_id_2, worker_settings=worker_settings, pool=pool, llm_call=_succeeding_llm
+    )
+
+    assert second.outcome == "report_created"
+    assert second.version_no == 1  # 最初に保存できた版が版1になる
+
+
 def test_retrying_the_same_run_id_returns_the_stored_outcome(
     migrated_database_url: str, worker_settings
 ) -> None:

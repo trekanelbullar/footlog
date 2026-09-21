@@ -9,7 +9,10 @@ _HEADER_RE = re.compile(r"^flowchart TD$")
 _NODE_RE = re.compile(
     r'^  E\d+(?:\[|\{\{|\(\(|\[/|>)"[^"\[\]{}()<>#;|&`\n\r]*"(?:\]|\}\}|\)\)|/\]|\])$'
 )
-_EDGE_RE = re.compile(r"^  E\d+ -\.-> E\d+$")
+# 隣どうしをつなぐ実線の矢印（時系列）。
+_TIMELINE_EDGE_RE = re.compile(r"^  E\d+ --> E\d+$")
+# supersedes をつなぐ点線の矢印。
+_SUPERSEDES_EDGE_RE = re.compile(r"^  E\d+ -\.-> E\d+$")
 
 _NOW = datetime(2026, 9, 21, 12, 0, tzinfo=UTC)
 
@@ -35,9 +38,9 @@ def _assert_every_line_matches(dsl: str) -> None:
     lines = dsl.splitlines()
     assert lines[0] == "flowchart TD"
     for line in lines[1:]:
-        assert _NODE_RE.match(line) or _EDGE_RE.match(line), (
-            f"line does not match the expected shape: {line!r}"
-        )
+        assert (
+            _NODE_RE.match(line) or _TIMELINE_EDGE_RE.match(line) or _SUPERSEDES_EDGE_RE.match(line)
+        ), f"line does not match the expected shape: {line!r}"
 
 
 def test_all_kinds_produce_matching_shapes() -> None:
@@ -52,7 +55,16 @@ def test_all_kinds_produce_matching_shapes() -> None:
     dsl = build_mermaid(events)
 
     _assert_every_line_matches(dsl)
-    assert dsl.count("\n") == 5  # header + 5 nodes, no edges
+    lines = dsl.splitlines()
+    # header + 5 nodes + 4 本の実線（隣どうしを時系列でつなぐ）、supersedes は無し。
+    assert len(lines) == 10
+    assert [line for line in lines if _TIMELINE_EDGE_RE.match(line)] == [
+        "  E1 --> E2",
+        "  E2 --> E3",
+        "  E3 --> E4",
+        "  E4 --> E5",
+    ]
+    assert not any(_SUPERSEDES_EDGE_RE.match(line) for line in lines)
 
 
 def test_dangerous_characters_are_escaped_and_truncated() -> None:
@@ -84,7 +96,8 @@ def test_supersedes_draws_dotted_edge_in_occurred_at_order() -> None:
     lines = dsl.splitlines()
     assert lines[1].startswith("  E1[")  # occurred_at 順（E1 が先）
     assert lines[2].startswith("  E2[")
-    assert lines[3] == "  E2 -.-> E1"
+    assert lines[3] == "  E1 --> E2"  # 隣どうしの実線（時系列）
+    assert lines[4] == "  E2 -.-> E1"  # supersedes は点線
 
 
 def test_supersedes_target_not_present_is_omitted() -> None:
@@ -94,3 +107,23 @@ def test_supersedes_target_not_present_is_omitted() -> None:
 
     _assert_every_line_matches(dsl)
     assert "-.->" not in dsl
+
+
+def test_same_occurred_at_breaks_tie_by_event_no() -> None:
+    events = [
+        _event(3, "decision", "3番目のはずが先に渡された"),
+        _event(1, "decision", "1番目"),
+        _event(2, "decision", "2番目"),
+    ]
+
+    dsl = build_mermaid(events)
+
+    _assert_every_line_matches(dsl)
+    lines = dsl.splitlines()
+    assert lines[1].startswith("  E1[")
+    assert lines[2].startswith("  E2[")
+    assert lines[3].startswith("  E3[")
+    assert [line for line in lines if _TIMELINE_EDGE_RE.match(line)] == [
+        "  E1 --> E2",
+        "  E2 --> E3",
+    ]

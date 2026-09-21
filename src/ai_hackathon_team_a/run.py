@@ -282,7 +282,7 @@ def _run_stages(
         ).fetchone()[0]
         goal_description = _fetch_goal_description(conn, project_id)
         all_segments, managers_segments = _fetch_input_segments(conn, project_id)
-        active_by_no = _fetch_active_events_by_partition_input(conn, project_id)
+        active_input = _fetch_active_events_by_partition_input(conn, project_id)
 
     new_event_nos: list[int] = []
     suspected_injection_by_partition: dict[Partition, set[str]] = {"all": set(), "managers": set()}
@@ -293,7 +293,7 @@ def _run_stages(
             _check_deadline(deadline)
             if not segments:
                 continue
-            pre_existing = active_by_no.get(partition, [])
+            pre_existing = active_input.summaries.get(partition, [])
             result = _extract_partition(
                 segments, pre_existing, llm_fn, deadline, goal_description=goal_description
             )
@@ -307,6 +307,7 @@ def _run_stages(
                 segments=segments,
                 result=result,
                 llm_fn=llm_fn,
+                existing_dedup_keys=active_input.dedup_keys.get(partition, set()),
             )
             new_event_nos.extend(persisted.new_event_nos)
             agent_candidates.extend(persisted.agent_candidates)
@@ -363,14 +364,15 @@ def _run_stages(
         for e in active_managers
     )
 
-    with pool.connection() as conn:
-        version_no = _allocate_version_no(conn, project_id)
-        conn.commit()
-
     _set_step(pool, run_id, "checking")
     _check_deadline(deadline)
 
     with pool.connection() as conn:
+        # 版の番号は、レポートを保存するこのトランザクションの中で払い出す。組み立て
+        # の途中で失敗しても（例外でロールバックすれば）next_version_no は進まない
+        # （保存しない実行は番号を使わない）。
+        version_no = _allocate_version_no(conn, project_id)
+
         # レポートを保存する直前に、もう一度 visibility_epoch を確かめる【B-X2】。
         notify_allowed = epoch_unchanged(conn, project_id, start_epoch)
 
@@ -509,20 +511,39 @@ def _fetch_input_segments(
     return all_segments, managers_segments
 
 
+@dataclass(frozen=True)
+class _ActiveEventsByPartition:
+    """「今も有効な出来事」を、組ごとの要約（抽出に見せる分）と重複検査の鍵の両方で持つ。
+
+    鍵は ``(kind, segment_ids の集合)``。同じ組の今も有効な出来事と種類・根拠の区切りが
+    どちらも一致する出来事は、抽出のたびに重複して追記されないようにする（設計書
+    §5.3 (2)(3)、手元の確認で見つかった重複の修正）。
+    """
+
+    summaries: dict[Partition, list[EventSummary]]
+    dedup_keys: dict[Partition, set[tuple[EventKind, frozenset[str]]]]
+
+
 def _fetch_active_events_by_partition_input(
     conn: psycopg.Connection, project_id: UUID
-) -> dict[Partition, list[EventSummary]]:
+) -> _ActiveEventsByPartition:
     """抽出に見せる「今も有効な出来事」を、組ごとに絞って返す（§5.3 (2)(3)）。"""
 
     all_events, state_map = _fetch_all_events_and_states(conn, project_id)
     active_all = _active_for_audience(all_events, state_map, "all")
     active_managers = _active_for_audience(all_events, state_map, "managers")
 
-    return {
-        "all": [_to_event_summary(e) for e in active_all],
-        # managers の組は、今も有効な出来事をすべて見る（§5.3 (2)）。
-        "managers": [_to_event_summary(e) for e in active_managers],
-    }
+    return _ActiveEventsByPartition(
+        summaries={
+            "all": [_to_event_summary(e) for e in active_all],
+            # managers の組は、今も有効な出来事をすべて見る（§5.3 (2)）。
+            "managers": [_to_event_summary(e) for e in active_managers],
+        },
+        dedup_keys={
+            "all": {(e.kind, frozenset(e.segment_ids)) for e in active_all},
+            "managers": {(e.kind, frozenset(e.segment_ids)) for e in active_managers},
+        },
+    )
 
 
 def _to_event_summary(row: _EventRow) -> EventSummary:
@@ -598,9 +619,34 @@ def _persist_partition(
     segments: list[SegmentIn],
     result: _PartitionExtractionResult,
     llm_fn,
+    existing_dedup_keys: set[tuple[EventKind, frozenset[str]]],
 ) -> _PersistResult:
     segment_by_label = {s.label: s for s in segments}
     state_map = _fetch_all_segment_states(conn, project_id)
+
+    # 同じ組の今も有効な出来事と、種類・根拠の区切りの集合がどちらも一致する出来事は
+    # 追記しない（持ち越しの区切りから同じ内容が再抽出される重複を防ぐ）。捨てた分の
+    # 区切りは、既存の出来事がすでに同じ内容を表しているので使用済み扱いにする
+    # （持ち越しにしない）。捨てた件数は測定用にログへ残す。
+    seen_dedup_keys = set(existing_dedup_keys)
+    kept_items: list[_ExtractedWithProvisional] = []
+    used_labels: set[str] = set()
+    dropped_duplicate_count = 0
+    for item in result.extracted:
+        key = (item.event.kind, frozenset(item.event.segment_ids))
+        if key in seen_dedup_keys:
+            dropped_duplicate_count += 1
+            used_labels.update(item.event.segment_ids)
+            continue
+        seen_dedup_keys.add(key)
+        kept_items.append(item)
+    if dropped_duplicate_count:
+        logger.info(
+            "run %s: partition=%s で既存の出来事と重複する %d 件を捨てました",
+            run_id,
+            partition,
+            dropped_duplicate_count,
+        )
 
     support_input = SupportInput(
         items=[
@@ -612,7 +658,7 @@ def _persist_partition(
                     if sid in segment_by_label
                 ],
             )
-            for item in result.extracted
+            for item in kept_items
         ]
     )
     support_output = check_support(support_input, llm_fn)
@@ -620,11 +666,10 @@ def _persist_partition(
     real_active_by_no = _fetch_real_active_event_ids(conn, project_id)
     provisional_to_real: dict[int, UUID] = {}
 
-    used_labels: set[str] = set()
     new_event_nos: list[int] = []
     agent_candidates: list[agent.AgentCandidate] = []
 
-    for item, support in zip(result.extracted, support_output.results, strict=True):
+    for item, support in zip(kept_items, support_output.results, strict=True):
         event = item.event
         used_labels.update(event.segment_ids)
 

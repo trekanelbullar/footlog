@@ -34,14 +34,16 @@ _FAKE_EXTRACT = json.dumps(
 )
 _FAKE_SUPPORT = json.dumps({"results": ["supported"]})
 # 組み立ては、存在する出来事(1)と、存在しない出来事番号(999)の両方を根拠にする文を返す。
+# purpose は「プロジェクトの目的」用で根拠0件でも「（根拠なし）」を付けない例外
+# 見出しのため（設計書 §5.3 (10)）、この I4 の検査は他の見出し（current_state）で行う。
 _FAKE_ASSEMBLE = json.dumps(
     {
         "sections": {
-            "purpose": [
+            "purpose": [],
+            "current_state": [
                 {"text": "実在する根拠の文", "event_nos": [1]},
                 {"text": "でっち上げの根拠の文", "event_nos": [999]},
             ],
-            "current_state": [],
             "direction": [],
         },
         "summary_for_mail": "要約",
