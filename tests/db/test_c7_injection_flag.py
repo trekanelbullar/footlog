@@ -133,3 +133,71 @@ def test_suspected_injection_flag_survives_id_checking(
 
     # 存在する番号（S1-2）だけが残り、存在しない番号（S9-9）は番号の検査で捨てられる。
     assert flags["suspected_injection"] == ["S1-2"]
+
+
+def _fake_llm_that_misses_injection(
+    stage: str, messages, *, run, json_mode=False, tools=None
+) -> LlmResult:
+    """現実に近い偽の LLM：誘導の文を出来事の根拠にせず、誘導の疑いも返さない。"""
+
+    if stage == "EXTRACT":
+        text = json.dumps(
+            {
+                "events": [
+                    {
+                        "kind": "decision",
+                        "summary": "Xを採用",
+                        "reason": "安いから",
+                        "occurred_at": "2026-09-21T10:00:00+09:00",
+                        "segment_ids": ["S1-1"],
+                        "origin": "human_originated",
+                        "supersedes_event_no": None,
+                        "conflicts_with_event_no": None,
+                    }
+                ],
+                "suspected_injection_segment_ids": [],
+            }
+        )
+    elif stage == "SUPPORT":
+        text = json.dumps({"results": ["supported"]})
+    elif stage == "ASSEMBLE":
+        text = json.dumps(
+            {
+                "sections": {
+                    "purpose": [{"text": "目的はG", "event_nos": []}],
+                    "current_state": [{"text": "Xを採用した", "event_nos": [1]}],
+                    "direction": [],
+                },
+                "summary_for_mail": "要約",
+            }
+        )
+    else:
+        text = json.dumps({"status": "pass", "notes": []})
+    return LlmResult(
+        text=text, tool_calls=None, input_tokens=1, output_tokens=1, model="fake", estimated=True
+    )
+
+
+def test_injection_is_flagged_even_if_not_cited_and_missed_by_llm(
+    migrated_database_url: str, worker_settings
+) -> None:
+    """2026-09-22 のデプロイ先の確認で起きたこと：誘導の文はどの出来事の根拠にもならず、
+    LLM も誘導の疑いを返さなかった。規則で拾い、根拠でなくても版に出ること。"""
+
+    project_id, run_id = _setup_project(migrated_database_url)
+    pool = ConnectionPool(migrated_database_url)
+    worker_settings = worker_settings.model_copy(update={"daily_cost_limit_usd": 500.0})
+
+    outcome = run_module.execute_run(
+        run_id, worker_settings=worker_settings, pool=pool, llm_call=_fake_llm_that_misses_injection
+    )
+    assert outcome.outcome == "report_created"
+
+    with psycopg.connect(migrated_database_url) as conn:
+        flags = conn.execute(
+            "SELECT flags FROM reports "
+            "WHERE project_id = %s AND version_no = %s AND audience = 'all'",
+            (project_id, outcome.version_no),
+        ).fetchone()[0]
+
+    assert flags["suspected_injection"] == ["S1-2"]

@@ -1025,7 +1025,10 @@ def _build_report(
     cited_labels = sorted({sid for labels in rendered.evidence_catalog.values() for sid in labels})
 
     flags: dict[str, object] = {
-        "suspected_injection": sorted(suspected_injection_labels & set(input_segment_ids)),
+        # 誘導の文は決定の根拠にならないので、根拠の区切り（input_segment_ids）で絞ると
+        # 必ず落ちる。呼び出し側が組ごとに渡す番号（全員向けの版には全員向けの組の番号
+        # だけ）をそのまま使う（I1 は呼び出し側の組の分け方で守られる）。
+        "suspected_injection": sorted(suspected_injection_labels),
         "unverified_ai_count": rendered.unverified_ai_count,
     }
 
