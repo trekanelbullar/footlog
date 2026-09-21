@@ -71,6 +71,8 @@ def test_no_calls_when_already_over_limit(
             settings=settings,
             worker_settings=worker_settings,
             pool=pool,
+            # 上限超過アラートの送信（本物の Resend への接続）はここでは確かめない。
+            alert_fn=lambda *_a, **_k: None,
         )
 
     assert orca_client.calls == 0
@@ -117,6 +119,7 @@ def test_only_one_of_two_concurrent_calls_goes_through_when_budget_has_room_for_
                 settings=settings,
                 worker_settings=worker_settings,
                 pool=pool,
+                alert_fn=lambda *_a, **_k: None,
             )
             results.append("ok")
         except CostLimitExceeded:

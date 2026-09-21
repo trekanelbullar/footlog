@@ -68,7 +68,7 @@ def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
 
         origin = raw_event.get("origin")
         origin = origin if origin in _VALID_ORIGINS else None
-        origin = _correct_origin(origin, kept_ids, speaker_by_label)
+        origin = correct_origin(origin, kept_ids, speaker_by_label)
 
         events.append(
             ExtractedEvent(
@@ -153,10 +153,10 @@ def _clean_optional_str(value: object) -> str | None:
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
-def _correct_origin(
+def correct_origin(
     origin: str | None, segment_ids: list[str], speaker_by_label: dict[str, str | None]
 ) -> str | None:
-    """出どころの補正（設計書 §5.3 (4)）。"""
+    """出どころの補正（設計書 §5.3 (4)）。エージェント（7段目）の置き換えの出来事でも使う。"""
 
     speakers = {speaker_by_label.get(sid) for sid in segment_ids}
     if "unknown" in speakers:

@@ -223,6 +223,60 @@ def ingest_file(
     )
 
 
+def ingest_answer(
+    conn: psycopg.Connection,
+    *,
+    project_id: UUID,
+    uploaded_by: UUID,
+    text: str,
+    visibility: Visibility,
+) -> IngestResult:
+    """質問への回答を取り込む（W23、設計書 §5.4、【C-2】）。
+
+    ``type = 'answer'`` の新しいソースとして§4の取り込みを通す（伏せ字も通る）。
+    話者は ``user`` 固定。可視性は呼び出し側（回答した時点の、元の出来事の実効の
+    可視性）が決めて渡す。会話の話者の目印は解釈せず、回答の全文を1つの区切りに
+    する。
+    """
+
+    full_text, redaction_count = redact(text)
+
+    source_no = _allocate_source_no(conn, project_id)
+    source_id = uuid4()
+    conn.execute(
+        """
+        INSERT INTO project_sources
+            (id, project_id, source_no, type, uploaded_by, recorded_at, visibility, next_seq)
+        VALUES (%s, %s, %s, 'answer', %s, %s, %s, 1)
+        """,
+        (source_id, project_id, source_no, uploaded_by, _now(), visibility),
+    )
+
+    version_id = _insert_version(conn, source_id=source_id, version_no=1, full_text=full_text)
+    raw_segments = [RawSegment(text=full_text, speaker="user")] if full_text.strip() else []
+    inserted = _insert_segments(
+        conn,
+        project_id=project_id,
+        source_no=source_no,
+        version_id=version_id,
+        base_seq=1,
+        raw_segments=raw_segments,
+        previous_texts=set(),
+    )
+    _finalize_source(
+        conn, source_id=source_id, version_id=version_id, next_seq=1 + len(raw_segments)
+    )
+
+    return IngestResult(
+        source_id=source_id,
+        source_no=source_no,
+        version_no=1,
+        segment_count=len(inserted),
+        new_segment_count=sum(inserted),
+        redaction_count=redaction_count,
+    )
+
+
 def list_sources(
     conn: psycopg.Connection, *, project_id: UUID, membership: Membership
 ) -> list[dict]:

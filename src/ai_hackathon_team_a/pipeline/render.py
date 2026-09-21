@@ -8,7 +8,7 @@
 
 from dataclasses import dataclass
 
-from ai_hackathon_team_a.pipeline.contracts import HEADING_LABELS, AssembleOutput, Origin
+from ai_hackathon_team_a.pipeline.contracts import HEADING_LABELS, AssembleOutput, EventKind, Origin
 
 _ORIGIN_LABELS: dict[str, str] = {
     "human_originated": "〔人が発案〕",
@@ -18,6 +18,10 @@ _ORIGIN_LABELS: dict[str, str] = {
 }
 
 _DECISIONS_HEADING = "decisions"
+# 理由が空のまま（エージェントが質問したが埋まらなかった等）の決定・却下案に
+# 「理由は未確認」を付ける見出し（設計書 §5.3 (7)(9)、spec D12）。
+_UNRESOLVED_REASON_HEADINGS = frozenset({"decisions", "rejected_options"})
+_UNRESOLVED_REASON_SUFFIX = "（理由は未確認：担当者に確認中）"
 
 
 @dataclass(frozen=True)
@@ -27,6 +31,8 @@ class RenderEvent:
     event_no: int
     segment_ids: list[str]
     origin: Origin | None
+    kind: EventKind | None = None
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -48,6 +54,8 @@ def render_markdown(
 
     segment_ids_by_event_no = {event.event_no: event.segment_ids for event in events}
     origin_by_event_no = {event.event_no: event.origin for event in events}
+    kind_by_event_no = {event.event_no: event.kind for event in events}
+    reason_by_event_no = {event.event_no: event.reason for event in events}
 
     unverified_count = sum(
         1
@@ -88,7 +96,15 @@ def render_markdown(
                 if len(origins) == 1:
                     origin_marker = f" {_ORIGIN_LABELS[next(iter(origins))]}"
 
-            lines.append(f"- {sentence.text}{origin_marker}{footnote_marker}")
+            unresolved_marker = ""
+            if heading in _UNRESOLVED_REASON_HEADINGS and any(
+                kind_by_event_no.get(n) in ("decision", "rejected_option")
+                and reason_by_event_no.get(n) is None
+                for n in sentence.event_nos
+            ):
+                unresolved_marker = f" {_UNRESOLVED_REASON_SUFFIX}"
+
+            lines.append(f"- {sentence.text}{origin_marker}{unresolved_marker}{footnote_marker}")
         lines.append("")
 
     body_markdown = "\n".join(lines).rstrip() + "\n"

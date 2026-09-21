@@ -2,22 +2,22 @@
 
 W15（``POST /internal/runs/{rid}/execute``）から呼ばれる。DB とアドバイザリ
 ロックに触れるのはこのモジュールだけで、抽出・裏付け・組み立て・検査・図の
-中身はすべて ``pipeline/`` の純粋関数に委ねる。
-
-エージェントのループ（(7)）・質問、メール・通知（(12)）は7段目で実装する。
-ここでは ``investigating``・``notifying`` の段階を通過するだけにする。
+中身はすべて ``pipeline/`` の純粋関数に委ねる。エージェントのループ（(7)）は
+``agent.py``、メール・アプリ内通知（(12)）は ``notify.py`` に委ねる。
 """
 
+import logging
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
+import httpx
 import psycopg
 import psycopg.types.json
 
-from ai_hackathon_team_a import visibility
+from ai_hackathon_team_a import agent, notify, visibility
 from ai_hackathon_team_a.authz import Visibility as SourceVisibility
 from ai_hackathon_team_a.db import ConnectionPool
 from ai_hackathon_team_a.llm import CostLimitExceeded, LlmResult, RunContext, call_llm
@@ -45,10 +45,17 @@ from ai_hackathon_team_a.pipeline.render import RenderEvent, render_markdown
 from ai_hackathon_team_a.pipeline.support import check_support
 from ai_hackathon_team_a.worker_settings import WorkerSettings
 
+logger = logging.getLogger(__name__)
+
 _RUN_TIMEOUT_SECONDS = 240
 _PROGRESS_KINDS: frozenset[EventKind] = frozenset(
     {"decision", "rejected_option", "open_issue", "finding"}
 )
+
+# W16 の error_message に出す、利用者向けの定型の日本語（設計書 §8 I1）。例外の
+# 詳細（接続情報等を含みうる）はサーバーのログにだけ残し、API には出さない。
+_GENERIC_ERROR_MESSAGE = "実行中にエラーが起きました。"
+_TIMEOUT_ERROR_MESSAGE = "時間内に終わりませんでした。"
 
 Outcome = Literal["report_created", "no_new_events", "locked", "cost_limited", "failed"]
 Partition = Literal["all", "managers"]
@@ -109,12 +116,23 @@ def execute_run(
     worker_settings: WorkerSettings,
     pool: ConnectionPool,
     llm_call=call_llm,
+    mail_transport: httpx.BaseTransport | None = None,
 ) -> RunOutcome:
-    """W15 の実体。ロックを取り、段階を進め、outcome を返す（設計書 §5.1〜§5.3）。
+    """W15 の実体。run を引き受け、ロックを取り、段階を進め、outcome を返す
+    （設計書 §5.1〜§5.3）。
 
     ``llm_call`` は ``call_llm`` と同じ形（``call_llm(stage, messages, *, run,
     json_mode, tools=None)``）の差し替え口で、テストで偽の実装に置き換えられる
     （本物を呼ぶのは常に ``llm.call_llm`` の1か所という原則は変わらない）。
+    ``mail_transport`` はテストで ``httpx.MockTransport`` に差し替える口。
+
+    **順序が重要**：まず ``queued → running`` への引き受け（``UPDATE ... WHERE
+    status = 'queued'``）を先に行い、それに成功した側だけがアドバイザリロックを
+    取りに行く。先にロックを試みて「取れなかった側が queued の run を閉じる」
+    順序だと、同じ run_id の二重送信で、ロックを取れた側が引き受ける前に
+    もう一方が同じ run を ``locked`` で閉じてしまい、両方が ``locked`` を返す
+    事故が起きる（引き受けを先に行えば、二重送信のどちらか一方しか
+    ``status='queued'`` の更新に成功しないため、この事故が起きない）。
     """
 
     with pool.connection() as conn:
@@ -123,6 +141,16 @@ def execute_run(
         raise ValueError(f"run {run_id} not found")
     project_id: UUID = row[0]
 
+    with pool.connection() as conn:
+        claimed = conn.execute(
+            "UPDATE runs SET status = 'running', started_at = now() "
+            "WHERE id = %s AND status = 'queued' RETURNING id",
+            (run_id,),
+        ).fetchone()
+    if claimed is None:
+        # 既に走った（同じ run_id の二重送信）。今の状態をそのまま返す（何も書き直さない）。
+        return _stored_outcome(pool, run_id)
+
     lock_key = f"decision-trace:{project_id}"
     lock_conn = psycopg.connect(worker_settings.database_url, autocommit=True)
     try:
@@ -130,17 +158,18 @@ def execute_run(
             "SELECT pg_try_advisory_lock(hashtextextended(%s, 0))", (lock_key,)
         ).fetchone()[0]
         if not locked:
-            # 出来事やレポートは書かないが、run 自体は閉じる。queued のまま残すと、
-            # 画面の状態問い合わせ（W16）がいつまでも終わりを知れないため。
-            with pool.connection() as conn:
-                conn.execute(
-                    "UPDATE runs SET status = 'done', outcome = 'locked', finished_at = now() "
-                    "WHERE id = %s AND status = 'queued'",
-                    (run_id,),
-                )
+            # 自分が引き受けた run だけを閉じる（他の実行の run には触れない）。
+            _finish_run(pool, run_id, status="done", outcome="locked")
             return RunOutcome(outcome="locked")
 
-        return _execute_locked(run_id, project_id=project_id, pool=pool, llm_call=llm_call)
+        return _run_claimed(
+            run_id,
+            project_id=project_id,
+            pool=pool,
+            llm_call=llm_call,
+            worker_settings=worker_settings,
+            mail_transport=mail_transport,
+        )
     finally:
         try:
             lock_conn.execute("SELECT pg_advisory_unlock(hashtextextended(%s, 0))", (lock_key,))
@@ -148,30 +177,33 @@ def execute_run(
             lock_conn.close()
 
 
-def _execute_locked(
-    run_id: UUID, *, project_id: UUID, pool: ConnectionPool, llm_call
-) -> RunOutcome:
-    deadline = time.monotonic() + _RUN_TIMEOUT_SECONDS
+def _stored_outcome(pool: ConnectionPool, run_id: UUID) -> RunOutcome:
+    """引き受けられなかった run（二重送信）の、今の状態をそのまま返す。"""
 
     with pool.connection() as conn:
-        updated = conn.execute(
-            "UPDATE runs SET status = 'running', started_at = now() "
-            "WHERE id = %s AND status = 'queued' RETURNING id",
+        row = conn.execute(
+            "SELECT outcome, "
+            "(SELECT MAX(version_no) FROM reports WHERE run_id = runs.id) "
+            "FROM runs WHERE id = %s",
             (run_id,),
         ).fetchone()
-    if updated is None:
-        # 既に走った（同じ run_id の二重送信）。今の状態をそのまま返す（何も書き直さない）。
-        with pool.connection() as conn:
-            row = conn.execute(
-                "SELECT status, outcome, "
-                "(SELECT MAX(version_no) FROM reports WHERE run_id = runs.id) "
-                "FROM runs WHERE id = %s",
-                (run_id,),
-            ).fetchone()
-        if row is not None and row[1] is not None:
-            return RunOutcome(outcome=row[1], version_no=row[2])
-        return RunOutcome(outcome="locked")
+    if row is not None and row[0] is not None:
+        return RunOutcome(outcome=row[0], version_no=row[1])
+    return RunOutcome(outcome="locked")
 
+
+def _run_claimed(
+    run_id: UUID,
+    *,
+    project_id: UUID,
+    pool: ConnectionPool,
+    llm_call,
+    worker_settings: WorkerSettings,
+    mail_transport: httpx.BaseTransport | None,
+) -> RunOutcome:
+    """run を引き受け、ロックも取れた実行の本体。"""
+
+    deadline = time.monotonic() + _RUN_TIMEOUT_SECONDS
     run = RunContext(project_id=project_id, run_id=run_id)
 
     def llm_fn(
@@ -185,18 +217,30 @@ def _execute_locked(
 
     try:
         return _run_stages(
-            run_id, project_id=project_id, pool=pool, llm_fn=llm_fn, deadline=deadline
+            run_id,
+            project_id=project_id,
+            pool=pool,
+            llm_fn=llm_fn,
+            deadline=deadline,
+            worker_settings=worker_settings,
+            mail_transport=mail_transport,
         )
     except CostLimitExceeded:
         _finish_run(pool, run_id, status="failed", outcome="cost_limited")
         return RunOutcome(outcome="cost_limited")
     except RunTimeoutError:
-        _finish_run(pool, run_id, status="failed", outcome="failed", error_message="timeout")
-        return RunOutcome(outcome="failed", error_message="timeout")
-    except Exception as exc:  # noqa: BLE001 - 実行全体を失敗として記録して終える
-        message = str(exc)[:500]
-        _finish_run(pool, run_id, status="failed", outcome="failed", error_message=message)
-        return RunOutcome(outcome="failed", error_message=message)
+        _finish_run(
+            pool, run_id, status="failed", outcome="failed", error_message=_TIMEOUT_ERROR_MESSAGE
+        )
+        return RunOutcome(outcome="failed", error_message=_TIMEOUT_ERROR_MESSAGE)
+    except Exception:  # noqa: BLE001 - 実行全体を失敗として記録して終える
+        # 例外の詳細（秘密・接続情報を含みうる）はログにだけ残し、API には出さない
+        # （設計書 §8 I1：W16 の error_message は定型の日本語にする）。
+        logger.exception("run %s failed", run_id)
+        _finish_run(
+            pool, run_id, status="failed", outcome="failed", error_message=_GENERIC_ERROR_MESSAGE
+        )
+        return RunOutcome(outcome="failed", error_message=_GENERIC_ERROR_MESSAGE)
 
 
 def _check_deadline(deadline: float) -> None:
@@ -226,6 +270,8 @@ def _run_stages(
     pool: ConnectionPool,
     llm_fn,
     deadline: float,
+    worker_settings: WorkerSettings,
+    mail_transport: httpx.BaseTransport | None,
 ) -> RunOutcome:
     _set_step(pool, run_id, "extracting")
 
@@ -240,6 +286,7 @@ def _run_stages(
 
     new_event_nos: list[int] = []
     suspected_injection_by_partition: dict[Partition, set[str]] = {"all": set(), "managers": set()}
+    agent_candidates: list[agent.AgentCandidate] = []
 
     with pool.connection() as conn:
         for partition, segments in (("all", all_segments), ("managers", managers_segments)):
@@ -252,7 +299,7 @@ def _run_stages(
             )
             suspected_injection_by_partition[partition] |= result.suspected_injection_segment_ids
             # 出来事が0件でも、消費されなかった区切りの carry_count は進める（§5.3 (6)）。
-            appended = _persist_partition(
+            persisted = _persist_partition(
                 conn,
                 project_id=project_id,
                 run_id=run_id,
@@ -261,10 +308,29 @@ def _run_stages(
                 result=result,
                 llm_fn=llm_fn,
             )
-            new_event_nos.extend(appended)
+            new_event_nos.extend(persisted.new_event_nos)
+            agent_candidates.extend(persisted.agent_candidates)
         conn.commit()
 
-    _set_step(pool, run_id, "investigating")  # エージェント・質問は7段目で実装する。
+    _set_step(pool, run_id, "investigating")
+
+    if agent_candidates:
+        _check_deadline(deadline)
+        with pool.connection() as conn:
+            resolved = agent.run_agent_for_candidates(
+                conn,
+                project_id=project_id,
+                run_id=run_id,
+                candidates=agent_candidates,
+                llm_fn=llm_fn,
+                goal_description=goal_description,
+                start_epoch=start_epoch,
+                worker_settings=worker_settings,
+                allocate_event_no=_allocate_event_no,
+                mail_transport=mail_transport,
+            )
+            new_event_nos.extend(r.event_no for r in resolved)
+            conn.commit()
 
     with pool.connection() as conn:
         project_row = conn.execute(
@@ -308,7 +374,7 @@ def _run_stages(
         # レポートを保存する直前に、もう一度 visibility_epoch を確かめる【B-X2】。
         notify_allowed = epoch_unchanged(conn, project_id, start_epoch)
 
-        _build_and_store_report(
+        built_all = _build_and_store_report(
             conn,
             project_id=project_id,
             run_id=run_id,
@@ -338,14 +404,33 @@ def _run_stages(
             )
         # epoch が変わっていたら、レポートは保存するが needs_rebuild は true のまま
         # にする（次の実行で今の状態から作り直す）。メール・通知を送るかどうかは
-        # notify_allowed を見て7段目が決める。
+        # notify_allowed を見て次で決める。
         conn.execute(
             "UPDATE projects SET needs_rebuild = %s WHERE id = %s",
             (not notify_allowed, project_id),
         )
         conn.commit()
 
-    _set_step(pool, run_id, "notifying")  # メール・アプリ内通知は7段目で実装する。
+    _set_step(pool, run_id, "notifying")
+
+    if notify_allowed and built_all.had_new_events:
+        with pool.connection() as conn:
+            # 送る直前にもう一度確かめる【B-X2】（保存後にもう一度可視性が変わった場合）。
+            if epoch_unchanged(conn, project_id, start_epoch):
+                notify.send_progress_notifications(
+                    conn,
+                    project_id=project_id,
+                    report_id=built_all.report_id,
+                    version_no=version_no,
+                    summary_for_mail=built_all.summary_for_mail,
+                    settings=worker_settings,
+                    transport=mail_transport,
+                )
+            else:
+                conn.execute(
+                    "UPDATE projects SET needs_rebuild = true WHERE id = %s", (project_id,)
+                )
+            conn.commit()
 
     _finish_run(pool, run_id, status="done", outcome="report_created")
     return RunOutcome(
@@ -496,6 +581,14 @@ def _extract_partition(
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _PersistResult:
+    """``_persist_partition`` の結果（設計書 §5.3 (6)(7)）。"""
+
+    new_event_nos: list[int]
+    agent_candidates: list[agent.AgentCandidate]
+
+
 def _persist_partition(
     conn: psycopg.Connection,
     *,
@@ -505,7 +598,7 @@ def _persist_partition(
     segments: list[SegmentIn],
     result: _PartitionExtractionResult,
     llm_fn,
-) -> list[int]:
+) -> _PersistResult:
     segment_by_label = {s.label: s for s in segments}
     state_map = _fetch_all_segment_states(conn, project_id)
 
@@ -529,6 +622,7 @@ def _persist_partition(
 
     used_labels: set[str] = set()
     new_event_nos: list[int] = []
+    agent_candidates: list[agent.AgentCandidate] = []
 
     for item, support in zip(result.extracted, support_output.results, strict=True):
         event = item.event
@@ -575,6 +669,25 @@ def _persist_partition(
         provisional_to_real[item.provisional_no] = row[0]
         new_event_nos.append(event_no)
 
+        if agent.needs_agent(
+            kind=event.kind,
+            reason=event.reason,
+            supersedes_event_no=event.supersedes_event_no,
+            conflicts_with_event_no=event.conflicts_with_event_no,
+        ):
+            agent_candidates.append(
+                agent.AgentCandidate(
+                    event_id=row[0],
+                    event_no=event_no,
+                    kind=event.kind,
+                    summary=event.summary,
+                    reason=event.reason,
+                    occurred_at=event.occurred_at,
+                    segment_ids=event.segment_ids,
+                    partition=partition,
+                )
+            )
+
     all_labels = {s.label for s in segments}
     carried_labels = sorted(all_labels - used_labels)
     if used_labels:
@@ -594,7 +707,7 @@ def _persist_partition(
             (project_id, carried_labels),
         )
 
-    return new_event_nos
+    return _PersistResult(new_event_nos=new_event_nos, agent_candidates=agent_candidates)
 
 
 def _fetch_real_active_event_ids(conn: psycopg.Connection, project_id: UUID) -> dict[int, UUID]:
@@ -733,6 +846,15 @@ def _active_for_audience(
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _StoredReport:
+    """``_build_and_store_report`` の結果（設計書 §5.3 (12) の通知の判定に使う）。"""
+
+    report_id: UUID
+    had_new_events: bool
+    summary_for_mail: str
+
+
 def _build_and_store_report(
     conn: psycopg.Connection,
     *,
@@ -745,7 +867,7 @@ def _build_and_store_report(
     new_event_nos: set[int],
     llm_fn,
     suspected_injection_labels: set[str],
-) -> None:
+) -> _StoredReport:
     existing_reports = conn.execute(
         "SELECT 1 FROM reports WHERE project_id = %s AND audience = %s LIMIT 1",
         (project_id, audience),
@@ -773,7 +895,13 @@ def _build_and_store_report(
     )
 
     render_events = [
-        RenderEvent(event_no=e.event_no, segment_ids=e.segment_ids, origin=e.origin)
+        RenderEvent(
+            event_no=e.event_no,
+            segment_ids=e.segment_ids,
+            origin=e.origin,
+            kind=e.kind,
+            reason=e.reason,
+        )
         for e in active_events
     ]
     checked_output = AssembleOutput(
@@ -801,13 +929,14 @@ def _build_and_store_report(
         "unverified_ai_count": rendered.unverified_ai_count,
     }
 
-    conn.execute(
+    row = conn.execute(
         """
         INSERT INTO reports
             (project_id, run_id, version_no, audience, kind, judge_status, body_markdown,
              mermaid_dsl, evidence_catalog, event_ids, cited_segment_ids, input_segment_ids,
              flags, summary_for_mail)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """,
         (
             project_id,
@@ -825,6 +954,12 @@ def _build_and_store_report(
             _to_jsonb(flags),
             result.output.summary_for_mail,
         ),
+    ).fetchone()
+
+    return _StoredReport(
+        report_id=row[0],
+        had_new_events=bool(audience_new_event_nos),
+        summary_for_mail=result.output.summary_for_mail,
     )
 
 

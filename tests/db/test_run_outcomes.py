@@ -156,6 +156,15 @@ def test_outcome_no_new_events(migrated_database_url: str, worker_settings) -> N
 def test_outcome_locked_when_advisory_lock_is_held(
     migrated_database_url: str, worker_settings
 ) -> None:
+    """別の run_id（別の実行）がロックを持っている状況で、この run は locked になる。
+
+    ``lock_conn`` は「別の run_id を処理中の実行」の代役（その実行が本物の
+    ``execute_run`` の中でロックを持ち続けている接続と同じ状態を作る）。この
+    テストの run_id は queued → running への引き受けには成功するが、ロックが
+    取れないため、自分自身を done / locked で閉じるだけで、出来事もレポートも
+    書かない（他の run_id には一切触れない、設計書 §5.2）。
+    """
+
     project_id = _setup_project_with_segment(migrated_database_url)
     run_id = _insert_queued_run(migrated_database_url, project_id)
     pool = ConnectionPool(migrated_database_url)
@@ -211,6 +220,9 @@ def test_outcome_cost_limited(migrated_database_url: str, worker_settings) -> No
         settings=Settings(_env_file=None, api_key="test-key"),
         worker_settings=worker_settings,
         pool=pool,
+        # 上限超過のたびに本物の Resend へ送ろうとしないよう、アラート送信は無効化する
+        # （コスト超過通知そのものは tests/invariants/test_i1_mail.py で確かめる）。
+        alert_fn=lambda *_a, **_k: None,
     )
 
     outcome = run_module.execute_run(

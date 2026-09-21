@@ -1,7 +1,6 @@
 """worker の FastAPI アプリケーション（設計書 §1.2・§2）。
 
-W1〜W16・W18・W19 は実装済み。W17・W20〜W23（定期実行・エージェントの質問）は
-以降の段で追加する。
+W1〜W23 を実装済み（W17・W20〜W23 は7・8段目で追加）。
 """
 
 from collections.abc import AsyncIterator
@@ -9,7 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from ai_hackathon_team_a.api import projects, reports, runs, sources
+from ai_hackathon_team_a.api import cron, notifications, projects, reports, runs, sources
 from ai_hackathon_team_a.api.errors import register_error_handlers
 from ai_hackathon_team_a.db import check_connected_as_app_worker, get_pool
 from ai_hackathon_team_a.worker_settings import get_worker_settings
@@ -32,6 +31,8 @@ app.include_router(projects.router)
 app.include_router(sources.router)
 app.include_router(runs.router)
 app.include_router(reports.router)
+app.include_router(notifications.router)
+app.include_router(cron.router)
 
 
 @app.get("/healthz")

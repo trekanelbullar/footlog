@@ -54,3 +54,25 @@ def fetch_source_states_for_labels(
         (project_id, labels),
     ).fetchall()
     return [(row[0], row[1]) for row in rows]
+
+
+def fetch_segment_states_for_project(
+    conn: psycopg.Connection, *, project_id: UUID
+) -> dict[str, tuple[bool, Visibility]]:
+    """プロジェクト全体の、区切りの番号（label）ごとの今の ``(is_excluded, visibility)``。
+
+    複数の出来事にまたがって同じ判定を何度も行う呼び出し元（``run.py``・
+    ``agent.py``・``noprogress.py``）が使う、1回のクエリでまとめて引く版。
+    """
+
+    rows = conn.execute(
+        """
+        SELECT seg.label, ps.is_excluded, ps.visibility
+        FROM source_segments seg
+        JOIN source_versions sv ON sv.id = seg.source_version_id
+        JOIN project_sources ps ON ps.id = sv.source_id
+        WHERE seg.project_id = %s
+        """,
+        (project_id,),
+    ).fetchall()
+    return {row[0]: (row[1], row[2]) for row in rows}

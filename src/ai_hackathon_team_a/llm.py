@@ -8,6 +8,7 @@
 ``redact.redact`` をもう一度かける（I6 の二重化）。
 """
 
+import logging
 import time
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -16,12 +17,14 @@ from typing import Protocol
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from ai_hackathon_team_a import pricing
+from ai_hackathon_team_a import mail, pricing
 from ai_hackathon_team_a.clients.orca import Completion, OrcaClient
 from ai_hackathon_team_a.config import Settings, Stage, get_settings
 from ai_hackathon_team_a.db import ConnectionPool, get_pool
 from ai_hackathon_team_a.redact import redact
 from ai_hackathon_team_a.worker_settings import WorkerSettings, get_worker_settings
+
+logger = logging.getLogger(__name__)
 
 _JST = ZoneInfo("Asia/Tokyo")
 
@@ -55,7 +58,28 @@ class AlertFn(Protocol):
 
 
 def send_cost_alert_email(worker_settings: WorkerSettings, *, alert_date: date) -> None:
-    """コスト上限超過の通知を送る（差し替え可能。メール送信の実体は7段目で実装する）。"""
+    """コスト上限超過の通知を ``SYSTEM_ALERT_EMAIL`` に送る（設計書 §6.1、1日1回）。
+
+    呼び出し元（``_reserve_budget``）が、その日初めての超過のときだけ呼ぶ
+    （``daily_cost_alerts`` の1日1回の絞り込みは呼び出し側の責務）。失敗しても
+    ``call_llm`` 全体を失敗にはしない（例外を外に投げない）。テストではこの関数
+    自体を差し替える（``call_llm(..., alert_fn=...)``）ことで、本物の Resend への
+    接続を避ける。
+    """
+
+    try:
+        mail.send_mail(
+            to=worker_settings.system_alert_email,
+            subject="【decision-trace】1日のAI利用コスト上限を超過しました",
+            text_body=(
+                f"{alert_date.isoformat()}（日本時間）のAI利用コストが、"
+                "設定されている1日の上限に達しました。"
+                "このためAIによる分析はこの後呼び出されません。"
+            ),
+            settings=worker_settings,
+        )
+    except mail.MailError:
+        logger.exception("cost alert mail failed for %s", alert_date)
 
 
 @lru_cache

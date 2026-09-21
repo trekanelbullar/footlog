@@ -111,6 +111,8 @@ def test_manual_execution_makes_no_non_db_connections_when_over_cost_limit(
         settings=fake_settings,
         worker_settings=worker_settings,
         pool=pool,
+        # 上限超過アラートの送信（本物の Resend への接続）はここでは確かめない。
+        alert_fn=lambda *_a, **_k: None,
     )
 
     outcome = run_module.execute_run(
@@ -153,6 +155,7 @@ def test_call_llm_raises_before_touching_network_when_over_limit(
             settings=settings,
             worker_settings=worker_settings,
             pool=pool,
+            alert_fn=lambda *_a, **_k: None,
         )
 
     non_local = [c for c in blocked_socket_connect if isinstance(c, str)]
