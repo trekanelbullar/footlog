@@ -95,6 +95,10 @@ def extract_events(inp: ExtractInput, llm: LlmFn) -> ExtractOutput:
     llm_flagged = [sid for sid in raw_injection_ids if isinstance(sid, str) and sid in valid_labels]
     # LLM の判定に、コードの規則で拾った番号を合わせる（LLM が見逃すことがあるため）
     suspected_injection = merge_labels(llm_flagged, detect_injection(inp.segments))
+    # 誘導の疑いのある区切りだけを根拠にした出来事は捨てる（その文に従った評価や
+    # 現在地を、レポートに載せないため。C7）。ほかの区切りも根拠にしていれば残す。
+    flagged = set(suspected_injection)
+    events = [e for e in events if not set(e.segment_ids) <= flagged]
 
     return ExtractOutput(
         events=events,
