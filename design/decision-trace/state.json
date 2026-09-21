@@ -1,0 +1,28 @@
+{
+  "currentNode": "批評",
+  "status": "in_progress",
+  "designVersion": "v2",
+  "approvedDesignVersion": null,
+  "approvedDesignSha256": null,
+  "approvedAt": null,
+  "approvalEvidence": null,
+  "requiredApprovalFingerprint": "v2:d014e60280a8",
+  "baseline": "feature/impl-core@0819a08",
+  "criticRound": 2,
+  "criticRoundLimit": 1,
+  "openIssueIds": [
+    "P-1"
+  ],
+  "requiredReads": [
+    "design.md",
+    "ledger.md"
+  ],
+  "nextAction": "codex によるクロスベンダー批評（A: API・認証／B: 流れと可視性／C: 不変条件のテスト）を仕分けて v3 に改訂。ユーザー追加の5点も v3 に入れる",
+  "lastUpdated": "2026-09-21",
+  "criticVendors": "claude/claude-opus-5（codex は打ち切りで省略）",
+  "decisions": {
+    "P-1": "追わない（既知の制限として README に明記）",
+    "specDeviations": "設計書の通りで了承",
+    "dependencies": "§13 の通りで了承（psycopg のまま）"
+  }
+}
