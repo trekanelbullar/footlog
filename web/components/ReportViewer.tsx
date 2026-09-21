@@ -104,19 +104,28 @@ function EvidencePanel({ label, items }: { label: string; items: NodeEvidenceEnt
 
 export default function ReportViewer({ report }: { report: ReportDetail }) {
   const [selected, setSelected] = useState<{ label: string; items: NodeEvidenceEntry[] } | null>(null);
-  // 初期値の時点で mermaid_dsl の有無を反映しておく（ReportViewer は版ごとに key で再マウントするため、
-  // report が変わった後にこの effect の中で同期的に setState し直す必要がない）。
-  const [diagramState, setDiagramState] = useState<"loading" | "ok" | "failed">(() =>
-    report.mermaid_dsl?.trim() ? "loading" : "failed"
-  );
+  // 図は縦に長く読みにくいため、レポート内では時系列の一覧を出し、Mermaid の図は
+  // 「図を大きく開く」で画面いっぱいに横向きで描く（2026-09-22 ユーザー合意）。
+  // mermaid_dsl が無い版（withheld・null）では開くボタンを出さない。
+  const hasDiagram = Boolean(report.mermaid_dsl?.trim());
+  const [diagramOpen, setDiagramOpen] = useState(false);
+  const [diagramState, setDiagramState] = useState<"loading" | "ok" | "failed">("loading");
   const [svg, setSvg] = useState<string>("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // withheld のときや、worker が mermaid_dsl を null で返したときは描画しない
-    // （reports.mermaid_dsl は DB 上 nullable）。
-    const dsl = report.mermaid_dsl;
-    if (!dsl?.trim()) return;
+    if (!diagramOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDiagramOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [diagramOpen]);
+
+  useEffect(() => {
+    // 開いたときだけ描く。worker の DSL は flowchart TD なので、横長の画面に合わせて LR にする。
+    const dsl = report.mermaid_dsl?.replace(/^flowchart TD\b/, "flowchart LR");
+    if (!diagramOpen || !dsl?.trim() || svg) return;
     let cancelled = false;
 
     const timeoutId = setTimeout(() => {
@@ -144,10 +153,10 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [report.mermaid_dsl, report.version_no]);
+  }, [diagramOpen, svg, report.mermaid_dsl, report.version_no]);
 
   useEffect(() => {
-    if (diagramState !== "ok" || !containerRef.current) return;
+    if (!diagramOpen || diagramState !== "ok" || !containerRef.current) return;
     const container = containerRef.current;
     const cleanups: (() => void)[] = [];
 
@@ -165,7 +174,7 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
       });
     }
     return () => cleanups.forEach((c) => c());
-  }, [diagramState, report.node_evidence]);
+  }, [diagramOpen, diagramState, report.node_evidence]);
 
   if (report.withheld) {
     return (
@@ -228,46 +237,43 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
           </article>
 
           <section className="rounded border bg-white p-4">
-            <h2 className="mb-3 text-sm font-semibold">図</h2>
-            {diagramState === "loading" && <p className="text-sm text-gray-500">図を描画しています…</p>}
-            {diagramState === "ok" && (
-              // mermaid.render の出力（securityLevel: "strict"）を描画する。
-              <div ref={containerRef} dangerouslySetInnerHTML={{ __html: svg }} />
-            )}
-            {diagramState === "failed" && (
-              <div>
-                <p className="mb-3 text-sm text-gray-600">
-                  図を表示できなかったため、一覧で表示しています。
-                </p>
-                {report.timeline.length === 0 ? (
-                  <p className="text-sm text-gray-500">表示できる項目がありません。</p>
-                ) : (
-                  <ul className="flex flex-col gap-2">
-                    {[...report.timeline]
-                      .sort((a, b) => compareIso(a.occurred_at, b.occurred_at))
-                      .map((item) => {
-                        const nodeId = `E${item.event_no}`;
-                        return (
-                          <li key={item.event_no}>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSelected({ label: nodeId, items: report.node_evidence[nodeId] ?? [] })
-                              }
-                              className="w-full rounded border px-3 py-2 text-left text-sm hover:bg-gray-50"
-                            >
-                              <span className="text-gray-500">{formatJst(item.occurred_at)}</span>
-                              {" ・ "}
-                              <span className="text-gray-500">{KIND_LABEL[item.kind] ?? item.kind}</span>
-                              {" ・ "}
-                              <span>{item.summary}</span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                )}
-              </div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">図（時系列）</h2>
+              {hasDiagram && (
+                <button
+                  type="button"
+                  onClick={() => setDiagramOpen(true)}
+                  className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                >
+                  図を大きく開く
+                </button>
+              )}
+            </div>
+            {report.timeline.length === 0 ? (
+              <p className="text-sm text-gray-500">表示できる項目がありません。</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {[...report.timeline]
+                  .sort((a, b) => compareIso(a.occurred_at, b.occurred_at))
+                  .map((item) => {
+                    const nodeId = `E${item.event_no}`;
+                    return (
+                      <li key={item.event_no}>
+                        <button
+                          type="button"
+                          onClick={() => setSelected({ label: nodeId, items: report.node_evidence[nodeId] ?? [] })}
+                          className="w-full rounded border px-3 py-2 text-left text-sm hover:bg-gray-50"
+                        >
+                          <span className="text-gray-500">{formatJst(item.occurred_at)}</span>
+                          {" ・ "}
+                          <span className="text-gray-500">{KIND_LABEL[item.kind] ?? item.kind}</span>
+                          {" ・ "}
+                          <span>{item.summary}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+              </ul>
             )}
           </section>
 
@@ -298,12 +304,57 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
           </section>
         </div>
 
+        {diagramOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="図"
+            className="fixed inset-0 z-50 flex flex-col bg-black/50 p-2 sm:p-6"
+            onClick={() => setDiagramOpen(false)}
+          >
+            <div
+              className="flex min-h-0 flex-1 flex-col rounded bg-white p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">図（ノードを押すと根拠の原文が出ます）</h2>
+                <button
+                  type="button"
+                  onClick={() => setDiagramOpen(false)}
+                  className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
+                >
+                  閉じる
+                </button>
+              </div>
+              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[3fr_1fr]">
+                <div className="min-h-0 overflow-auto">
+                  {diagramState === "loading" && <p className="text-sm text-gray-500">図を描画しています…</p>}
+                  {diagramState === "ok" && (
+                    // mermaid.render の出力（securityLevel: "strict"）を描画する。
+                    <div ref={containerRef} dangerouslySetInnerHTML={{ __html: svg }} />
+                  )}
+                  {diagramState === "failed" && (
+                    <p className="text-sm text-gray-600">図を表示できませんでした。レポートの一覧をご覧ください。</p>
+                  )}
+                </div>
+                <div className="min-h-0 overflow-auto">
+                  {selected ? (
+                    <EvidencePanel label={selected.label} items={selected.items} />
+                  ) : (
+                    <p className="text-sm text-gray-500">ノードを押すと、根拠の原文がここに表示されます。</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="lg:sticky lg:top-4 lg:self-start">
           {selected ? (
             <EvidencePanel label={selected.label} items={selected.items} />
           ) : (
             <div className="rounded border bg-white p-4 text-sm text-gray-500">
-              図のノードまたは一覧の項目を選ぶと、根拠の原文がここに表示されます。
+              一覧の項目や図のノードを選ぶと、根拠の原文がここに表示されます。
             </div>
           )}
         </div>
