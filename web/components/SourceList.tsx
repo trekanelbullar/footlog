@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ExcludeReason, SourceSummary } from "@/lib/worker-types";
 
-const TYPE_LABEL: Record<string, string> = { file: "ファイル", conversation: "会話", answer: "回答" };
+const TYPE_LABEL: Record<string, string> = {
+  file: "ファイル",
+  conversation: "会話",
+  answer: "回答",
+};
 const REASON_OPTIONS: { value: ExcludeReason; label: string }[] = [
   { value: "private", label: "個人的な内容" },
   { value: "confidential", label: "機密情報" },
@@ -15,9 +19,12 @@ const REASON_OPTIONS: { value: ExcludeReason; label: string }[] = [
 export default function SourceList({
   initialSources,
   myUserId,
+  isManager,
 }: {
   initialSources: SourceSummary[];
   myUserId: string;
+  /** 権限表（§1.3）に合わせて、押しても 403 になる操作のボタンは出さない（判定の本体は worker）。 */
+  isManager: boolean;
 }) {
   const router = useRouter();
   const [reasons, setReasons] = useState<Record<string, ExcludeReason>>({});
@@ -34,7 +41,10 @@ export default function SourceList({
       const res = await fetch(`/api/sources/${s.source_id}/visibility`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visibility: nextVisibility, reason: reasonFor(s.source_id) }),
+        body: JSON.stringify({
+          visibility: nextVisibility,
+          reason: reasonFor(s.source_id),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -56,7 +66,10 @@ export default function SourceList({
       const res = await fetch(`/api/sources/${s.source_id}/exclusion`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_excluded: !s.is_excluded, reason: reasonFor(s.source_id) }),
+        body: JSON.stringify({
+          is_excluded: !s.is_excluded,
+          reason: reasonFor(s.source_id),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -95,7 +108,9 @@ export default function SourceList({
 
   return (
     <div className="flex flex-col gap-3">
-      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead className="text-gray-500">
@@ -115,42 +130,61 @@ export default function SourceList({
                 <td className="py-2 pr-2">S{s.source_no}</td>
                 <td className="py-2 pr-2">{TYPE_LABEL[s.type] ?? s.type}</td>
                 <td className="py-2 pr-2">{s.filename ?? "（会話）"}</td>
-                <td className="py-2 pr-2">{s.uploaded_by === myUserId ? "自分" : "他のメンバー"}</td>
-                <td className="py-2 pr-2">{s.visibility === "all" ? "全員" : "マネージャーのみ"}</td>
                 <td className="py-2 pr-2">
-                  {s.is_excluded ? `除外中（${s.exclude_reason ?? "-"}）` : "なし"}
+                  {s.uploaded_by === myUserId ? "自分" : "他のメンバー"}
+                </td>
+                <td className="py-2 pr-2">
+                  {s.visibility === "all" ? "全員" : "マネージャーのみ"}
+                </td>
+                <td className="py-2 pr-2">
+                  {s.is_excluded
+                    ? `除外中（${s.exclude_reason ?? "-"}）`
+                    : "なし"}
                 </td>
                 <td className="py-2 pr-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      className="rounded border px-1 py-0.5 text-xs"
-                      value={reasonFor(s.source_id)}
-                      onChange={(e) =>
-                        setReasons((r) => ({ ...r, [s.source_id]: e.target.value as ExcludeReason }))
-                      }
-                    >
-                      {REASON_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      disabled={busy === s.source_id}
-                      onClick={() => toggleVisibility(s)}
-                      className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      {s.visibility === "all" ? "マネージャー限定に" : "全員公開に"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy === s.source_id}
-                      onClick={() => toggleExclusion(s)}
-                      className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      {s.is_excluded ? "除外を戻す" : "除外する"}
-                    </button>
+                    {(isManager || s.uploaded_by === myUserId) && (
+                      <select
+                        className="rounded border px-1 py-0.5 text-xs"
+                        value={reasonFor(s.source_id)}
+                        onChange={(e) =>
+                          setReasons((r) => ({
+                            ...r,
+                            [s.source_id]: e.target.value as ExcludeReason,
+                          }))
+                        }
+                      >
+                        {REASON_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {(isManager ||
+                      (s.uploaded_by === myUserId &&
+                        s.visibility === "all")) && (
+                      <button
+                        type="button"
+                        disabled={busy === s.source_id}
+                        onClick={() => toggleVisibility(s)}
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {s.visibility === "all"
+                          ? "マネージャー限定に"
+                          : "全員公開に"}
+                      </button>
+                    )}
+                    {(isManager || s.uploaded_by === myUserId) && (
+                      <button
+                        type="button"
+                        disabled={busy === s.source_id}
+                        onClick={() => toggleExclusion(s)}
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {s.is_excluded ? "除外を戻す" : "除外する"}
+                      </button>
+                    )}
                     {s.type === "file" && (
                       <button
                         type="button"

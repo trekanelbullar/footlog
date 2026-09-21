@@ -27,7 +27,11 @@ export default async function ProjectDetailPage({
   if (!session) redirect("/login");
 
   const [detail, sources, reports] = await loadOrNotFound(() =>
-    Promise.all([w3GetProject(session, pid), w10ListSources(session, pid), w18ListReports(session, pid)])
+    Promise.all([
+      w3GetProject(session, pid),
+      w10ListSources(session, pid),
+      w18ListReports(session, pid),
+    ]),
   );
 
   const latestReport = reports.length ? reports[reports.length - 1] : null;
@@ -40,7 +44,9 @@ export default async function ProjectDetailPage({
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-semibold">{detail.project.name}</h1>
-            <p className="mt-1 text-sm text-gray-600">{detail.project.goal_description}</p>
+            <p className="mt-1 text-sm text-gray-600">
+              {detail.project.goal_description}
+            </p>
           </div>
           <Link
             href={`/projects/${pid}/members`}
@@ -52,11 +58,16 @@ export default async function ProjectDetailPage({
 
         {detail.excluded_summary && (
           <div className="mt-4 rounded bg-amber-50 p-3 text-sm text-amber-800">
-            <p className="font-medium">除外されたソース：{detail.excluded_summary.count}件</p>
+            <p className="font-medium">
+              除外されたソース：{detail.excluded_summary.count}件
+            </p>
             <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-              {(Object.keys(REASON_LABEL) as Array<keyof typeof REASON_LABEL>).map((reason) => (
+              {(
+                Object.keys(REASON_LABEL) as Array<keyof typeof REASON_LABEL>
+              ).map((reason) => (
                 <li key={reason}>
-                  {REASON_LABEL[reason]}：{detail.excluded_summary!.by_reason[reason]}件
+                  {REASON_LABEL[reason]}：
+                  {detail.excluded_summary!.by_reason[reason]}件
                 </li>
               ))}
             </ul>
@@ -74,7 +85,9 @@ export default async function ProjectDetailPage({
             最新の版（版{latestReport.version_no}）を見る
           </Link>
         ) : (
-          <p className="text-sm text-gray-500">まだレポートがありません。「今すぐ確認」を実行してください。</p>
+          <p className="text-sm text-gray-500">
+            まだレポートがありません。「今すぐ確認」を実行してください。
+          </p>
         )}
         {reports.length > 1 && (
           <p className="mt-2 text-sm text-gray-500">
@@ -96,7 +109,11 @@ export default async function ProjectDetailPage({
 
       <section className="rounded border bg-white p-4">
         <h2 className="mb-3 text-lg font-semibold">ソース一覧</h2>
-        <SourceList initialSources={sources} myUserId={session.userId} />
+        <SourceList
+          initialSources={sources}
+          myUserId={session.userId}
+          isManager={detail.my_role === "manager"}
+        />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
@@ -105,7 +122,9 @@ export default async function ProjectDetailPage({
           <AddConversationForm pid={pid} />
         </div>
         <div className="rounded border bg-white p-4">
-          <h2 className="mb-3 text-lg font-semibold">ファイルをアップロードする</h2>
+          <h2 className="mb-3 text-lg font-semibold">
+            ファイルをアップロードする
+          </h2>
           <AddFileForm pid={pid} />
         </div>
       </section>

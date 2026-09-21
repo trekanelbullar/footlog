@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { NotificationItem } from "@/lib/worker-types";
+import { formatJst } from "@/lib/format";
 
 const KIND_LABEL: Record<string, string> = {
   question: "質問",
@@ -23,7 +24,9 @@ export default function NotificationList({
     if (n.read_at) return;
     setError(null);
     try {
-      const res = await fetch(`/api/me/notifications/${n.id}/read`, { method: "POST" });
+      const res = await fetch(`/api/me/notifications/${n.id}/read`, {
+        method: "POST",
+      });
       if (!res.ok) {
         const data = await res.json();
         setError(data.message ?? "既読にできませんでした。");
@@ -36,7 +39,8 @@ export default function NotificationList({
   }
 
   function href(n: NotificationItem): string {
-    if (n.kind === "question" && n.question_id) return `/questions/${n.question_id}`;
+    if (n.kind === "question" && n.question_id)
+      return `/questions/${n.question_id}`;
     return `/projects/${n.project_id}`;
   }
 
@@ -46,19 +50,29 @@ export default function NotificationList({
 
   return (
     <div className="flex flex-col gap-2">
-      {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>
+      )}
       <ul className="flex flex-col gap-2">
         {initialNotifications.map((n) => (
           <li
             key={n.id}
             className={`rounded border p-3 ${n.read_at ? "bg-white" : "bg-blue-50"}`}
           >
-            <a href={href(n)} onClick={() => markRead(n)} className="flex items-center justify-between">
+            <a
+              href={href(n)}
+              onClick={() => markRead(n)}
+              className="flex items-center justify-between"
+            >
               <span>
-                <span className="mr-2 text-xs text-gray-500">[{KIND_LABEL[n.kind] ?? n.kind}]</span>
+                <span className="mr-2 text-xs text-gray-500">
+                  [{KIND_LABEL[n.kind] ?? n.kind}]
+                </span>
                 {n.title}
               </span>
-              <span className="text-xs text-gray-400">{n.created_at}</span>
+              <span className="text-xs text-gray-400">
+                {formatJst(n.created_at)}
+              </span>
             </a>
           </li>
         ))}
