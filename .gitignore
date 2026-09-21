@@ -3,6 +3,18 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Project-local secrets and generated artifacts
+.env
+.env.*
+!.env.example
+.venv/
+log/
+logs/
+output/
+outputs/
+test_out/
+data/
+
 # C extensions
 *.so
 
@@ -148,7 +160,6 @@ activemq-data/
 *.sage.py
 
 # Environments
-.env
 .envrc
 .venv
 env/
@@ -218,10 +229,6 @@ __marimo__/
 .streamlit/secrets.toml
 
 # ---- Project additions ----
-# Env files (keep template tracked)
-.env.*
-!.env.example
-
 # Node / Next.js
 node_modules/
 .next/
