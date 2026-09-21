@@ -105,3 +105,33 @@ def test_allow_regeneration_defaults_to_true() -> None:
 
     assert calls.count("ASSEMBLE") == 2
     assert result.judge_status == "pass"
+
+
+def test_judge_input_marks_unresolved_reason_like_render() -> None:
+    """理由が空の決定には、表示と同じ「理由は未確認」の印が Judge の入力にも付く。"""
+
+    from ai_hackathon_team_a.pipeline.contracts import AssembleOutput, Sentence
+    from ai_hackathon_team_a.pipeline.judge import judge_report
+
+    output = AssembleOutput(
+        sections={
+            "decisions": [
+                Sentence(text="Xを採用", event_nos=[1], no_evidence=False),
+                Sentence(text="Yを採用", event_nos=[2], no_evidence=False),
+            ],
+            "current_status": [Sentence(text="進行中", event_nos=[1], no_evidence=False)],
+        },
+        summary_for_mail="要約",
+    )
+    seen: list[str] = []
+
+    def _llm(stage: str, messages, *, json_mode: bool = False, tools=None) -> _Result:
+        seen.append(messages[1]["content"])
+        return _Result(_JUDGE_PASS)
+
+    judge_report(output, _llm, unresolved_reason_event_nos=frozenset({1}))
+
+    lines = seen[0].splitlines()
+    assert "- Xを採用 （理由は未確認：担当者に確認中）" in lines
+    assert "- Yを採用" in lines
+    assert "- 進行中" in lines  # 決定・却下案以外の見出しには付けない

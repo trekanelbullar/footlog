@@ -1049,6 +1049,11 @@ def _build_report(
         valid_event_nos=valid_event_nos,
         unsupported_event_nos=unsupported_event_nos,
         allow_regeneration=allow_regeneration,
+        unresolved_reason_event_nos=frozenset(
+            e.event_no
+            for e in active_events
+            if e.kind in ("decision", "rejected_option") and e.reason is None
+        ),
     )
 
     # AD-10：この版で警告してよい「過去に却下した案との類似」（その却下案の実効の
