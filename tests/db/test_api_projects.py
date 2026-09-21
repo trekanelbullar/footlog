@@ -400,3 +400,22 @@ def test_other_projects_pid_does_not_leak_membership(
     response = api_client.get(f"/internal/projects/{other_project}", headers=auth_headers(user_id))
 
     assert response.status_code == 404
+
+
+def test_create_project_with_invalid_body_returns_common_error_format(
+    api_client: TestClient, migrated_database_url: str, auth_headers: AuthHeaders
+) -> None:
+    """入力検査の失敗（422）も設計書 §2 の共通のエラー形式で返る。値は含めない。"""
+
+    response = api_client.post(
+        "/internal/projects",
+        headers=auth_headers(),
+        json={"goal_description": "G"},  # name が無い
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["error"] == "invalid_request"
+    assert "message" in body
+    assert "name" in body["fields"]
+    assert "G" not in str(body)

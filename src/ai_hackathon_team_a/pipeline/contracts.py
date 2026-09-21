@@ -133,6 +133,32 @@ class AssembleOutput(BaseModel):
     summary_for_mail: str
 
 
+def chunk_segments(segments: list[SegmentIn], limit: int = 6000) -> list[list[SegmentIn]]:
+    """区切りを約 ``limit`` 文字ごとの塊に分ける（設計書 §5.3 (3)）。
+
+    区切りの途中では切らない：1つの区切りを2つの塊にまたがらせない。1件だけで
+    ``limit`` を超える区切りは、それだけで1つの塊になる。
+    """
+
+    chunks: list[list[SegmentIn]] = []
+    current: list[SegmentIn] = []
+    current_chars = 0
+
+    for segment in segments:
+        segment_chars = len(segment.text)
+        if current and current_chars + segment_chars > limit:
+            chunks.append(current)
+            current = []
+            current_chars = 0
+        current.append(segment)
+        current_chars += segment_chars
+
+    if current:
+        chunks.append(current)
+
+    return chunks
+
+
 class LlmFn(Protocol):
     """``call_llm``（設計書 §6.1）と同じ形の呼び出し可能オブジェクト。
 

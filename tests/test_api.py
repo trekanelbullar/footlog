@@ -93,6 +93,22 @@ def test_me_projects_rejects_missing_jwt(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_unmatched_path_returns_common_error_format(client: TestClient) -> None:
+    response = client.get("/internal/does-not-exist")
+
+    assert response.status_code == 404
+    assert response.json() == {"error": "not_found", "message": "指定されたパスが見つかりません。"}
+
+
+def test_disallowed_method_returns_common_error_format(client: TestClient) -> None:
+    response = client.delete("/healthz")
+
+    assert response.status_code == 405
+    body = response.json()
+    assert body["error"] == "method_not_allowed"
+    assert "message" in body
+
+
 def test_cron_secret_is_not_accepted_on_user_route(client: TestClient) -> None:
     """X-Cron-Secret をユーザー用ルートに付けても、X-Worker-Secret 無しでは通らない。"""
 
