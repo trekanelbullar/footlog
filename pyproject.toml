@@ -48,5 +48,5 @@ extend-exclude = ["design"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.flake8-bugbear]
-# FastAPI の Depends/Header は引数の既定値で呼ぶのが公式の作法のため、B008 の対象から外す。
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Header"]
+# FastAPI の Depends/Header/File/Form は引数の既定値で呼ぶのが公式の作法のため、B008 の対象から外す。
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.File", "fastapi.Form"]
