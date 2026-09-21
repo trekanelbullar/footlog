@@ -31,3 +31,18 @@ const FOOTNOTE_REF = /\[\^(\d+)\]/g;
 export function linkFootnoteRefs(markdown: string): string {
   return markdown.replace(FOOTNOTE_REF, (_match, n: string) => `[［${n}］](#fn-${n})`);
 }
+
+const REJECTED_SIMILARITY_BRACKET = /(〔過去に却下した案と類似：)([^〕]*)(〕)/g;
+const NODE_ID = /E\d+/g;
+
+/**
+ * 本文の「〔過去に却下した案と類似：E12〕」の中の `E12` を、根拠パネルを開くリンクに変える（AD-10）。
+ * リンク先の `#evidence-E12` は ReportViewer 側で node_evidence を開くために使うだけで、
+ * ページ内には対応する id を持つ要素は無い（クリックはイベント委譲で拾う）。
+ */
+export function linkRejectedSimilarityRefs(markdown: string): string {
+  return markdown.replace(REJECTED_SIMILARITY_BRACKET, (_match, prefix: string, inner: string, suffix: string) => {
+    const linked = inner.replace(NODE_ID, (nodeId: string) => `[${nodeId}](#evidence-${nodeId})`);
+    return `${prefix}${linked}${suffix}`;
+  });
+}

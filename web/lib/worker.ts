@@ -14,6 +14,7 @@ import type {
   CreateRunOutput,
   CreateSourceOutput,
   DownloadUrlOutput,
+  EventSearchResult,
   ExecuteRunOutput,
   Member,
   MyProjectSummary,
@@ -415,4 +416,22 @@ export async function w23AnswerQuestion(
     session: s,
     body: input,
   });
+}
+
+// ---- AD-12：出来事の検索 ----
+
+export async function w25SearchEvents(
+  session: Session | null,
+  pid: string,
+  q: string
+): Promise<EventSearchResult[]> {
+  const s = requireSession(session);
+  // 2文字未満は送らない（design.md addenda AD-12）。
+  const query = q.trim();
+  if (query.length < 2) return [];
+  if (isMockMode()) return mock.mockSearchEvents(pid, mockUserIdFromToken(s.accessToken), query);
+  return callWorker<EventSearchResult[]>(
+    `/internal/projects/${pid}/events/search?q=${encodeURIComponent(query)}`,
+    { method: "GET", session: s }
+  );
 }

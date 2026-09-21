@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { AnchorHTMLAttributes, HTMLAttributes, LiHTMLAttributes, OlHTMLAttributes } from "react";
-import { compareIso, formatJst, linkFootnoteRefs } from "@/lib/format";
+import { compareIso, formatJst, linkFootnoteRefs, linkRejectedSimilarityRefs } from "@/lib/format";
 import type { ExcludeReason, NodeEvidenceEntry, ReportDetail } from "@/lib/worker-types";
 
 const REASON_LABEL: Record<ExcludeReason, string> = {
@@ -32,6 +32,16 @@ function SafeLink({ href, children }: AnchorHTMLAttributes<HTMLAnchorElement>) {
           {children}
         </a>
       </sup>
+    );
+  }
+  // AD-10：linkRejectedSimilarityRefs が作る #evidence-E12 は、クリックで根拠パネルを開く
+  // ボタンとして出す（ページ遷移はしない）。実際の処理は onClick のイベント委譲で拾う。
+  const evidenceMatch = href?.match(/^#evidence-(E\d+)$/);
+  if (evidenceMatch) {
+    return (
+      <button type="button" data-evidence-node={evidenceMatch[1]} className="text-blue-600 underline hover:no-underline">
+        {children}
+      </button>
     );
   }
   if (href && /^https?:\/\//i.test(href)) {
@@ -169,6 +179,16 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
   // withheld=false の場合しか通らないが、型は Partial のため既定値で補う。
   const suspectedInjection = report.flags.suspected_injection ?? [];
   const unverifiedAiCount = report.flags.unverified_ai_count ?? 0;
+  // AD-10：任意の項目。無ければ警告なし。
+  const rejectedSimilarityCount = report.flags.rejected_similarity?.length ?? 0;
+
+  function openEvidenceFromBody(e: React.MouseEvent<HTMLElement>) {
+    const target = (e.target as HTMLElement).closest<HTMLElement>("[data-evidence-node]");
+    if (!target) return;
+    const nodeId = target.dataset.evidenceNode;
+    if (!nodeId) return;
+    setSelected({ label: nodeId, items: report.node_evidence[nodeId] ?? [] });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -176,6 +196,7 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
         <span>生成日時：{formatJst(report.generated_at)}</span>
         <span>判定：{report.judge_status === "pass" ? "合格" : "要確認"}</span>
         <span>未確認の件数：{unverifiedAiCount}</span>
+        <span>過去に却下した案と類似：{rejectedSimilarityCount}件</span>
       </div>
 
       {suspectedInjection.length > 0 && (
@@ -200,8 +221,10 @@ export default function ReportViewer({ report }: { report: ReportDetail }) {
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-6">
-          <article className="rounded border bg-white p-4">
-            <ReactMarkdown components={MARKDOWN_COMPONENTS}>{linkFootnoteRefs(report.body_markdown)}</ReactMarkdown>
+          <article className="rounded border bg-white p-4" onClick={openEvidenceFromBody}>
+            <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+              {linkRejectedSimilarityRefs(linkFootnoteRefs(report.body_markdown))}
+            </ReactMarkdown>
           </article>
 
           <section className="rounded border bg-white p-4">

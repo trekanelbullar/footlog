@@ -7,6 +7,7 @@ import SourceList from "@/components/SourceList";
 import AddConversationForm from "@/components/AddConversationForm";
 import AddFileForm from "@/components/AddFileForm";
 import RunPanel from "@/components/RunPanel";
+import CostLimitedBanner from "@/components/CostLimitedBanner";
 import type { ExcludeReason } from "@/lib/worker-types";
 
 const REASON_LABEL: Record<ExcludeReason, string> = {
@@ -33,6 +34,8 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="flex flex-col gap-8">
+      {detail.cost_limited_today && <CostLimitedBanner />}
+
       <section className="rounded border bg-white p-4">
         <div className="flex items-start justify-between">
           <div>

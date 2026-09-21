@@ -5,6 +5,7 @@ import type {
   Audience,
   CreateSourceOutput,
   DownloadUrlOutput,
+  EventSearchResult,
   ExcludeReason,
   ExcludedSummary,
   Member,
@@ -19,6 +20,7 @@ import type {
   RunStatusOutput,
   RunStep,
   SourceSummary,
+  SpeakerCounts,
   Visibility,
 } from "@/lib/worker-types";
 import { MOCK_MANAGER, MOCK_MEMBER } from "@/lib/mock/users";
@@ -119,6 +121,8 @@ interface StoredProject {
   nextSourceNo: number;
   nextEventNo: number;
   nextVersionNo: number;
+  /** AD-9：日本時間の今日、daily_cost_alerts に行があるか（費用の上限に達して分析を行わなかったか）。 */
+  costLimitedToday: boolean;
 }
 
 type StoredNotification = NotificationItem;
@@ -307,15 +311,27 @@ function seedProject(): StoredProject {
       origin: "human_originated",
       partition: "all",
     },
+    {
+      // AD-10：却下案の再浮上の検知の確認用（event_no 15「独自メール配信システムの自作は却下」と類似）。
+      event_no: 31,
+      kind: "decision",
+      summary: "独自の配信システムを自作する方針に転換",
+      reason: "外部サービスの障害が続いたため",
+      occurred_at: "2026-09-21T09:00:00+09:00",
+      segment_labels: ["S1-1"],
+      origin: "human_originated",
+      partition: "all",
+    },
   ];
 
-  const allEventNos = [12, 13, 14, 15, 16];
-  const managersEventNos = [12, 13, 14, 15, 16, 20];
+  const allEventNos = [12, 13, 14, 15, 16, 31];
+  const managersEventNos = [12, 13, 14, 15, 16, 20, 31];
 
   const bodyAll = [
     "## 今回決定したこと（未確認：1件）",
     '- 配信基盤は"Resend"（1日100通まで）を採用 〔AIの提案を人が確認〕[^12]',
     "- 通知文面のトーンはカジュアルにする 〔AIの提案のまま（未確認）〕[^16]",
+    "- 独自の配信システムを自作する方針に転換 〔過去に却下した案と類似：E15〕[^31]",
     "",
     "## 却下した案",
     "- 独自メール配信システムの自作は却下[^15]",
@@ -381,6 +397,15 @@ function seedProject(): StoredProject {
         text: sources[0].segments[2].text,
       },
     ],
+    "31": [
+      {
+        label: "S1-1",
+        source_no: 1,
+        speaker: "user",
+        recorded_at: "2026-09-18T10:00:00+09:00",
+        text: sources[0].segments[0].text,
+      },
+    ],
   };
 
   const footnotesManagers: ReportDetail["footnotes"] = {
@@ -402,6 +427,7 @@ function seedProject(): StoredProject {
     E14: [{ label: "S1-2", text: sources[0].segments[1].text }],
     E15: [{ label: "S1-4", text: sources[0].segments[3].text }],
     E16: [{ label: "S1-3", text: sources[0].segments[2].text }],
+    E31: [{ label: "S1-1", text: sources[0].segments[0].text }],
   };
 
   const nodeEvidenceManagers: ReportDetail["node_evidence"] = {
@@ -436,7 +462,11 @@ function seedProject(): StoredProject {
       footnotes: footnotesAll,
       mermaid_dsl: mermaidAll,
       node_evidence: nodeEvidenceAll,
-      flags: { suspected_injection: ["S1-2"], unverified_ai_count: 1 },
+      flags: {
+        suspected_injection: ["S1-2"],
+        unverified_ai_count: 1,
+        rejected_similarity: [{ event_no: 31, rejected_event_no: 15 }],
+      },
       event_nos: allEventNos,
     },
     {
@@ -450,7 +480,11 @@ function seedProject(): StoredProject {
       footnotes: footnotesManagers,
       mermaid_dsl: mermaidManagers,
       node_evidence: nodeEvidenceManagers,
-      flags: { suspected_injection: ["S1-2"], unverified_ai_count: 1 },
+      flags: {
+        suspected_injection: ["S1-2"],
+        unverified_ai_count: 1,
+        rejected_similarity: [{ event_no: 31, rejected_event_no: 15 }],
+      },
       event_nos: managersEventNos,
     },
     {
@@ -534,8 +568,10 @@ function seedProject(): StoredProject {
     events,
     reports,
     nextSourceNo: 5,
-    nextEventNo: 31,
+    nextEventNo: 32,
     nextVersionNo: 4,
+    // AD-9：完了条件（帯の表示確認）をそのまま curl で確かめられるよう、既定で true にしておく。
+    costLimitedToday: true,
   };
 }
 
@@ -579,6 +615,16 @@ function createInitialState(): MockState {
         title: "新しいレポート（版1）ができました",
         created_at: "2026-09-18T10:10:00+09:00",
         read_at: "2026-09-18T11:00:00+09:00",
+        question_id: null,
+      },
+      {
+        // AD-9：manager にだけ1日1回届く通知（見え方の確認用）。
+        id: "n-0000003",
+        kind: "cost_limited",
+        project_id: PROJECT_ID,
+        title: "本日は費用の上限に達したため、分析を行っていません",
+        created_at: "2026-09-22T09:00:00+09:00",
+        read_at: null,
         question_id: null,
       },
     ],
@@ -749,6 +795,7 @@ export function mockCreateProject(
     nextSourceNo: 1,
     nextEventNo: 1,
     nextVersionNo: 1,
+    costLimitedToday: false,
   };
   projects.set(id, stored);
   return { project_id: id };
@@ -761,6 +808,7 @@ export function mockGetProject(pid: string, userId: string): ProjectDetail {
     project: p.project,
     my_role: member.role,
     excluded_summary: member.role === "manager" ? computeExcludedSummary(p) : null,
+    cost_limited_today: p.costLimitedToday,
   };
 }
 
@@ -874,6 +922,14 @@ function segmentize(text: string): string[] {
     .slice(0, 200);
 }
 
+// AD-8：区切りの先頭が話者の目印（「ユーザー:」「AI:」等）で始まるかを見る、モック用の簡易判定。
+// 本物の話者判定は worker 側にある。
+function detectSpeaker(text: string): "user" | "ai" | "unknown" {
+  if (/^\s*(user|ユーザー)\s*[:：]/i.test(text)) return "user";
+  if (/^\s*(ai|assistant|アシスタント)\s*[:：]/i.test(text)) return "ai";
+  return "unknown";
+}
+
 export function mockCreateConversationSource(
   pid: string,
   userId: string,
@@ -888,7 +944,7 @@ export function mockCreateConversationSource(
   const segments: StoredSegment[] = chunks.map((t, i) => ({
     label: `S${sourceNo}-${i + 1}`,
     seq: i + 1,
-    speaker: "unknown",
+    speaker: detectSpeaker(t),
     text: t,
   }));
   const source: StoredSource = {
@@ -908,12 +964,15 @@ export function mockCreateConversationSource(
     segments,
   };
   p.sources.push(source);
+  const speaker_counts: SpeakerCounts = { user: 0, ai: 0, unknown: 0 };
+  for (const seg of segments) speaker_counts[seg.speaker] += 1;
   return {
     source_id: source.source_id,
     label_prefix: `S${sourceNo}`,
     version_no: 1,
     segment_count: segments.length,
     redaction_count: redactCount(input.text),
+    speaker_counts,
   };
 }
 
@@ -1170,6 +1229,62 @@ export function mockGetReport(pid: string, versionNo: number, userId: string): R
   };
 }
 
+// ---- AD-12（W25）：出来事の検索 ----
+
+/** ラベル（"S1-2" 等）から、そのソース（"S1"）を引く。 */
+function sourceForLabel(p: StoredProject, label: string): StoredSource | undefined {
+  const sourceNo = Number.parseInt(label.slice(1).split("-")[0], 10);
+  return p.sources.find((s) => s.source_no === sourceNo);
+}
+
+function segmentForLabel(p: StoredProject, label: string): StoredSegment | undefined {
+  const source = sourceForLabel(p, label);
+  return source?.segments.find((s) => s.label === label);
+}
+
+/**
+ * 出来事の実効の可視性（design.md §5.5 の簡易版）。根拠のソースのどれかが除外なら「除外」、
+ * どれかが managers_only、または partition = managers なら「managers_only」、それ以外は「all」。
+ */
+function eventEffectiveVisibility(p: StoredProject, e: StoredEvent): "all" | "managers_only" | "excluded" {
+  let visibility: "all" | "managers_only" = e.partition === "managers" ? "managers_only" : "all";
+  for (const label of e.segment_labels) {
+    const source = sourceForLabel(p, label);
+    if (!source) continue;
+    if (source.is_excluded) return "excluded";
+    if (source.visibility === "managers_only") visibility = "managers_only";
+  }
+  return visibility;
+}
+
+export function mockSearchEvents(pid: string, userId: string, query: string): EventSearchResult[] {
+  const p = getProjectOr404(pid);
+  const member = getMemberOr404(p, userId);
+  const q = query.toLowerCase();
+  const visible = p.events.filter((e) => {
+    const visibility = eventEffectiveVisibility(p, e);
+    if (member.role === "manager") return visibility !== "excluded";
+    return visibility === "all";
+  });
+  const matched = visible.filter(
+    (e) => e.summary.toLowerCase().includes(q) || (e.reason ?? "").toLowerCase().includes(q)
+  );
+  return matched
+    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at))
+    .slice(0, 50)
+    .map((e) => ({
+      event_no: e.event_no,
+      kind: e.kind,
+      occurred_at: e.occurred_at,
+      summary: e.summary,
+      reason: e.reason,
+      evidence: e.segment_labels.map((label) => ({
+        label,
+        text: segmentForLabel(p, label)?.text ?? "",
+      })),
+    }));
+}
+
 // ---- W20〜W23：通知・質問 ----
 
 export function mockListNotifications(userId: string): NotificationItem[] {
@@ -1179,9 +1294,13 @@ export function mockListNotifications(userId: string): NotificationItem[] {
       const q = n.question_id ? questions.get(n.question_id) : null;
       return q?.asked_to === userId;
     }
-    // report・no_progress はデモとして全所属者に見せる（本物は宛先ごとに別レコード）。
     const p = projects.get(n.project_id);
-    return Boolean(p?.members.some((m) => m.user_id === userId));
+    const member = p?.members.find((m) => m.user_id === userId);
+    if (!member) return false;
+    // AD-9：cost_limited はプロジェクトの manager にだけ届く。
+    if (n.kind === "cost_limited") return member.role === "manager";
+    // report・no_progress はデモとして全所属者に見せる（本物は宛先ごとに別レコード）。
+    return true;
   });
 }
 

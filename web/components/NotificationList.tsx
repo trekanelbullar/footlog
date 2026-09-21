@@ -8,6 +8,7 @@ const KIND_LABEL: Record<string, string> = {
   question: "質問",
   report: "レポート",
   no_progress: "無進捗",
+  cost_limited: "費用上限",
 };
 
 export default function NotificationList({

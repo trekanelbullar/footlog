@@ -32,7 +32,7 @@ export type RunOutcome =
 export type Audience = "all" | "managers";
 export type JudgeStatus = "pass" | "flagged";
 export type EventKind = "decision" | "rejected_option" | "open_issue" | "finding" | "status";
-export type NotificationKind = "question" | "report" | "no_progress";
+export type NotificationKind = "question" | "report" | "no_progress" | "cost_limited";
 export type QuestionStatus = "open" | "answered" | "expired";
 
 /** worker のエラー応答（{"error": "<コード>", "message": "<表示用の日本語>"}） */
@@ -109,6 +109,8 @@ export interface ProjectDetail {
   latest_run?: LatestRunSummary | null;
   /** manager のときだけ値が入る。member には常に無い（null）。 */
   excluded_summary?: ExcludedSummary | null;
+  /** AD-9：日本時間の今日、費用の上限に達して分析を行わなかったら true。全員に返る。 */
+  cost_limited_today: boolean;
 }
 
 /** W4 入力 */
@@ -173,6 +175,13 @@ export interface CreateConversationSourceInput {
   visibility: Visibility;
 }
 
+/** AD-8：話者の内訳（区切りごとに user・ai・unknown を数えたもの）。 */
+export interface SpeakerCounts {
+  user: number;
+  ai: number;
+  unknown: number;
+}
+
 /** W8・W9 共通の出力 */
 export interface CreateSourceOutput {
   source_id: string;
@@ -181,6 +190,8 @@ export interface CreateSourceOutput {
   segment_count: number;
   redaction_count: number;
   new_segment_count?: number;
+  /** AD-8：W8（会話の貼り付け）だけが返す。worker の古い版が返さなくても落ちないよう任意にする。 */
+  speaker_counts?: SpeakerCounts;
 }
 
 /** W9 入力（multipart のうち file 以外のフィールド） */
@@ -278,9 +289,17 @@ export interface NodeEvidenceEntry {
   text: string;
 }
 
+/** AD-10：出来事 event_no が、過去の却下案 rejected_event_no に似ていたという警告1件分。 */
+export interface RejectedSimilarityFlag {
+  event_no: number;
+  rejected_event_no: number;
+}
+
 export interface ReportFlags {
   suspected_injection: string[];
   unverified_ai_count: number;
+  /** AD-10：任意。無ければ警告なしとして扱う。 */
+  rejected_similarity: RejectedSimilarityFlag[];
 }
 
 export interface TimelineItem {
@@ -352,4 +371,16 @@ export interface AnswerQuestionInput {
 /** W23 出力 */
 export interface AnswerQuestionOutput {
   source_id: string;
+}
+
+// ---- AD-12：出来事の検索（W25） ----
+
+/** W25: GET /internal/projects/{pid}/events/search?q=... の要素 */
+export interface EventSearchResult {
+  event_no: number;
+  kind: EventKind;
+  occurred_at: string;
+  summary: string;
+  reason: string | null;
+  evidence: NodeEvidenceEntry[];
 }

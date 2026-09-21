@@ -4,6 +4,8 @@ import { loadOrNotFound } from "@/lib/page-helpers";
 import { w18ListReports, w19GetReport, w3GetProject } from "@/lib/worker";
 import ReportViewer from "@/components/ReportViewer";
 import VersionSwitcher from "@/components/VersionSwitcher";
+import CostLimitedBanner from "@/components/CostLimitedBanner";
+import EventSearchPanel from "@/components/EventSearchPanel";
 
 export default async function ReportPage({
   params,
@@ -25,10 +27,15 @@ export default async function ReportPage({
 
   return (
     <div className="flex flex-col gap-6">
+      {detail.cost_limited_today && <CostLimitedBanner />}
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{detail.project.name} のレポート</h1>
         <VersionSwitcher pid={pid} reports={reports} currentVersion={versionNo} />
       </div>
+
+      <EventSearchPanel pid={pid} />
+
       {/* 版が変わったら内部状態（選択中の根拠パネルなど）を確実にリセットするため key で再マウントする */}
       <ReportViewer key={report.version_no} report={report} />
     </div>
