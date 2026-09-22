@@ -123,7 +123,8 @@ export default function SourceList({
           return (
             <li
               key={s.source_id}
-              className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              id={`source-${s.source_id}`}
+              className="flex scroll-mt-20 flex-col gap-2 px-4 py-3 target:bg-amber-50 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-gray-900">

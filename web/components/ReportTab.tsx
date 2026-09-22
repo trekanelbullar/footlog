@@ -1,9 +1,8 @@
 import type { Session } from "@/lib/auth";
-import { w18ListReports, w19GetReport } from "@/lib/worker";
+import { w10ListSources, w18ListReports, w19GetReport } from "@/lib/worker";
 import { newEventNos } from "@/lib/article";
 import ReportViewer from "@/components/ReportViewer";
 import VersionSwitcher from "@/components/VersionSwitcher";
-import EventSearchPanel from "@/components/EventSearchPanel";
 import AddSourceButton from "@/components/AddSourceButton";
 import { EmptyState } from "@/components/ui/Feedback";
 import type { TimelineItem } from "@/lib/worker-types";
@@ -45,7 +44,10 @@ export default async function ReportTab({
   }
 
   const target = versionNo ?? Math.max(...reports.map((r) => r.version_no));
-  const report = await w19GetReport(session, pid, target);
+  const [report, sources] = await Promise.all([
+    w19GetReport(session, pid, target),
+    w10ListSources(session, pid),
+  ]);
 
   // NEW の印：1つ前の見られる版の時系列に無い出来事。前の版が無ければ付けない。
   const previous = reports
@@ -65,12 +67,13 @@ export default async function ReportTab({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <VersionSwitcher pid={pid} reports={reports} currentVersion={target} />
-        <EventSearchPanel pid={pid} />
       </div>
       {/* 版が変わったら内部状態を確実にリセットするため key で再マウントする */}
       <ReportViewer
         key={report.version_no}
+        pid={pid}
         report={report}
+        sources={sources}
         projectName={projectName}
         newEventNos={[...newEventNos(report.timeline, previousTimeline)]}
         running={running}
