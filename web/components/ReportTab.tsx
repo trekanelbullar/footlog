@@ -18,12 +18,14 @@ export default async function ReportTab({
   projectName,
   versionNo,
   hasSources,
+  running = false,
 }: {
   session: Session;
   pid: string;
   projectName: string;
   versionNo: number | null;
   hasSources: boolean;
+  running?: boolean;
 }) {
   const reports = await w18ListReports(session, pid);
 
@@ -71,6 +73,7 @@ export default async function ReportTab({
         report={report}
         projectName={projectName}
         newEventNos={[...newEventNos(report.timeline, previousTimeline)]}
+        running={running}
       />
     </div>
   );

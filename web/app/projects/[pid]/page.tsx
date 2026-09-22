@@ -24,6 +24,7 @@ export default async function ProjectDetailPage({
       projectName={detail.project.name}
       versionNo={null}
       hasSources={sources.length > 0}
+      running={detail.latest_run?.status === "running"}
     />
   );
 }

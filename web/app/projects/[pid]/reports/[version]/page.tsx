@@ -23,6 +23,7 @@ export default async function ReportPage({
       projectName={detail.project.name}
       versionNo={Number.parseInt(version, 10)}
       hasSources={sources.length > 0}
+      running={detail.latest_run?.status === "running"}
     />
   );
 }

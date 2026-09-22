@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import Chip, { type ChipTone } from "@/components/ui/Chip";
+import { STATUS_LABEL, reportStatus, type ReportStatus } from "@/lib/report-status";
 import Button from "@/components/ui/Button";
 import { compareIso, formatJst } from "@/lib/format";
 import {
@@ -77,6 +79,12 @@ const KIND_STYLE: Record<
 };
 
 const MERMAID_TIMEOUT_MS = 10000;
+
+const STATUS_TONE: Record<ReportStatus, ChipTone> = {
+  checking: "gray",
+  needs_review: "orange",
+  checked: "green",
+};
 
 // 根拠は右パネルに出す（本文をスクロールさせて飛ばさない、design/ui-guidelines.md a）。
 interface PanelEntry {
@@ -181,7 +189,7 @@ function PullQuote({ n, report }: { n: number; report: ReportDetail }) {
       className="my-8 scroll-mt-24 border-l-4 border-accent py-1 pl-5 md:pl-7"
     >
       <blockquote
-        className={`whitespace-pre-wrap break-words font-serif-jp font-bold leading-snug text-ink ${size}`}
+        className={`whitespace-pre-wrap break-words font-sans-jp font-bold leading-snug text-ink ${size}`}
       >
         {first.text}
       </blockquote>
@@ -266,7 +274,7 @@ function EvidenceQuotes({ items }: { items: NodeEvidenceEntry[] }) {
       {items.map((item, i) => (
         <blockquote key={`${item.label}-${i}`} className="mb-3 last:mb-0">
           {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
-          <p className="whitespace-pre-wrap break-words font-serif-jp text-lg font-bold leading-snug text-ink">
+          <p className="whitespace-pre-wrap break-words font-sans-jp text-lg font-bold leading-snug text-ink">
             {item.text}
           </p>
           <p className="mt-1 font-sans-jp text-[11px] text-[#6b655a]">
@@ -282,10 +290,13 @@ export default function ReportViewer({
   report,
   projectName,
   newEventNos,
+  running = false,
 }: {
   report: ReportDetail;
   projectName: string;
   newEventNos: number[];
+  /** この版の後の実行が進行中か（ステータス「検査中」）。 */
+  running?: boolean;
 }) {
   const [diagramState, setDiagramState] = useState<"loading" | "ok" | "failed">(
     () => (report.mermaid_dsl?.trim() ? "loading" : "failed"),
@@ -411,6 +422,7 @@ export default function ReportViewer({
   const suspectedInjection = report.flags.suspected_injection ?? [];
   const unverifiedAiCount = report.flags.unverified_ai_count ?? 0;
   const rejectedSimilarity = report.flags.rejected_similarity ?? [];
+  const status = reportStatus(report, running);
 
   const rejectedSection = sections.find((s) => s.kind === "rejected");
   const statusSection = sections.find((s) => s.kind === "status");
@@ -452,7 +464,7 @@ export default function ReportViewer({
   const renderSection = (section: ArticleSection) => (
     <section key={section.heading} className="border-t border-ink pt-8">
       <Kicker>{section.label}</Kicker>
-      <h2 className="mt-2 mb-6 font-serif-jp text-2xl font-black leading-tight text-ink md:text-3xl">
+      <h2 className="mt-2 mb-6 font-sans-jp text-2xl font-black leading-tight text-ink md:text-3xl">
         {section.heading}
       </h2>
       {section.items.length === 0 ? (
@@ -479,49 +491,24 @@ export default function ReportViewer({
     <PanelContext.Provider value={{ footnote: openFootnote, node: openNode }}>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <article className="min-w-0 font-sans-jp text-ink">
-          {/* ヒーロー */}
-          <header className="border-b-2 border-ink pt-2 pb-8">
-            <div className="mx-auto max-w-6xl">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <Kicker>決定ログ ／ {projectName}</Kicker>
-              </div>
-              <h1 className="mt-6 max-w-4xl break-words font-serif-jp text-[2rem] font-black leading-[1.25] text-ink md:text-6xl md:leading-[1.15]">
-                {headline ? headline.summary : `${projectName} の記録`}
-              </h1>
-              {lead && (
-                <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#3a3731]">
-                  {lead}
-                </p>
-              )}
-              <p className="mt-6 flex flex-wrap gap-x-5 gap-y-1 border-t border-rule pt-3 text-xs tracking-wide text-[#6b655a]">
-                <span>{formatJst(report.generated_at)}</span>
-                <span>
-                  第{report.version_no}版
-                  {report.audience === "managers" ? "（管理者向け）" : ""}
-                </span>
-                <span
-                  className={
-                    unverifiedAiCount > 0 ? "font-bold text-amber" : ""
-                  }
-                >
-                  未確認 {unverifiedAiCount}件
-                </span>
-                <span
-                  className={
-                    report.judge_status === "pass"
-                      ? ""
-                      : "font-bold text-accent"
-                  }
-                >
-                  検査 {report.judge_status === "pass" ? "合格" : "要確認"}
-                </span>
-                {fresh.size > 0 && (
-                  <span className="font-bold text-accent">
-                    NEW {fresh.size}件
-                  </span>
-                )}
-              </p>
+          {/* パンくず・メタデータ・タイトル（ui-spec-3col.md 2・3） */}
+          <header className="border-b border-gray-200 pb-6">
+            <nav aria-label="パンくず" className="text-xs text-gray-500">
+              決定ログ <span className="mx-1 text-gray-300">/</span> {projectName}
+            </nav>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Chip tone="gray">
+                v{report.version_no}
+                {report.audience === "managers" ? "・管理者向け" : ""}
+              </Chip>
+              <Chip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Chip>
+              {fresh.size > 0 && <Chip tone="green">NEW {fresh.size}件</Chip>}
+              <span className="ml-auto text-xs text-gray-500">最終更新 {formatJst(report.generated_at)}</span>
             </div>
+            <h1 className="mt-4 max-w-[720px] break-words text-[28px] font-bold leading-snug text-gray-900 md:text-[32px]">
+              {headline ? headline.summary : `${projectName} の記録`}
+            </h1>
+            {lead && <p className="mt-3 max-w-[720px] text-sm leading-relaxed text-gray-600">{lead}</p>}
           </header>
 
           {(suspectedInjection.length > 0 || report.excluded_summary) && (
@@ -577,7 +564,7 @@ export default function ReportViewer({
               )}
               <div className="px-5 py-6 md:px-7">
                 <Kicker>REJECTED</Kicker>
-                <h2 className="mt-2 mb-4 font-serif-jp text-xl font-black text-ink">
+                <h2 className="mt-2 mb-4 font-sans-jp text-xl font-black text-ink">
                   {rejectedSection?.heading ?? "検討したが採用しなかった選択肢"}
                 </h2>
                 {!rejectedSection || rejectedSection.items.length === 0 ? (
@@ -633,7 +620,7 @@ export default function ReportViewer({
             <div className="flex flex-wrap items-baseline justify-between gap-2 pt-6">
               <div>
                 <Kicker>TIMELINE</Kicker>
-                <p className="mt-1 font-serif-jp text-xl font-black">
+                <p className="mt-1 font-sans-jp text-xl font-black">
                   決定の流れ
                 </p>
               </div>
