@@ -5,8 +5,18 @@ description = "Team A's AI Hackathon project using Orca Router"
 readme = "README.md"
 requires-python = "==3.13.15"
 dependencies = [
+    "fastapi>=0.141.1",
+    "httpx>=0.28.1",
     "openai>=1.68,<3",
+    "openpyxl>=3.1.5",
+    "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.8,<3",
+    "pyjwt[crypto]>=2.14.0",
+    "pypdf>=6.19.0",
+    "python-docx>=1.2.0",
+    "python-multipart>=0.0.32",
+    "python-pptx>=1.0.2",
+    "uvicorn[standard]>=0.53.0",
 ]
 
 [project.scripts]
@@ -32,6 +42,13 @@ addopts = "-q"
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+# design/ はコードではなく設計書（Markdown 中の Python 断片を ruff format が誤って
+# 対象にしてしまうため除外。design/ 自体はこの1段目の作業対象外）。
+extend-exclude = ["design"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI の Depends/Header/File/Form は引数の既定値で呼ぶのが公式の作法のため、B008 の対象から外す。
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Header", "fastapi.File", "fastapi.Form"]

@@ -1,0 +1,16 @@
+# Cloud Build に送らないもの（秘密と、worker のイメージに要らないもの）
+.gcloudignore
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.venv
+web/
+design/
+tests/
+scripts/
+db/
+**/__pycache__
+.ruff_cache
+.pytest_cache

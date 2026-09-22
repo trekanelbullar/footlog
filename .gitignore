@@ -27,6 +27,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# ↑ Python のテンプレートの lib/ が web/lib/（Next.js の共有コード）まで無視しないように
+!web/lib/
 lib64/
 parts/
 sdist/
@@ -227,3 +229,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- Project additions ----
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# Credentials
+*credentials*.json
+*service-account*.json
+
+# Claude Code (local only)
+.claude/settings.local.json
+
+# Design chat logs
+design/**/context-chat.md

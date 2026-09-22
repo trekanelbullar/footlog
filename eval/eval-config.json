@@ -1,0 +1,135 @@
+{
+  "candidates": [
+    {
+      "name": "qwen3.7-flash",
+      "model": "qwen/qwen3.7-flash",
+      "vendor": "Alibaba",
+      "note": "現行の本番モデル（ORCAROUTER_MODEL の既定値）。"
+    },
+    {
+      "name": "gemini-2.5-flash-lite",
+      "model": "google/gemini-2.5-flash-lite",
+      "vendor": "Google",
+      "note": "軽量。候補中で単価が低めのGoogleモデル。"
+    },
+    {
+      "name": "glm-5.3-flash",
+      "model": "z-ai/glm-5.3-flash",
+      "vendor": "Zhipu",
+      "note": "軽量。候補中で最安値クラス。"
+    },
+    {
+      "name": "deepseek-v4.1-flash",
+      "model": "deepseek/deepseek-v4.1-flash",
+      "vendor": "DeepSeek",
+      "note": "軽量。DeepSeekの最新フラッシュ系。"
+    },
+    {
+      "name": "gpt-5.4-nano",
+      "model": "openai/gpt-5.4-nano",
+      "vendor": "OpenAI",
+      "note": "軽量。OpenAI系で最も安い帯。"
+    },
+    {
+      "name": "claude-opus-5",
+      "model": "anthropic/claude-opus-5",
+      "vendor": "Anthropic",
+      "note": "精度の天井の目安（高価）。"
+    }
+  ],
+  "excluded_models": [
+    "orcarouter/auto"
+  ],
+  "stages": [
+    "extract",
+    "support",
+    "assemble",
+    "judge"
+  ],
+  "configurations": {
+    "A": {
+      "description": "全段階（extract/support/assemble/judge）で good モデルを使う。"
+    },
+    "B": {
+      "description": "抽出だけ good モデル。support/assemble/judge は最安（cheap）モデル。"
+    },
+    "C": {
+      "description": "全段階 cheap モデル。裏付け検査で unsupported と判定された出来事だけを good モデルで再抽出する。"
+    }
+  },
+  "reasoning_effort": "off",
+  "repeats": 3,
+  "temperature": 0,
+  "call_timeout_seconds": 120,
+  "cost_cap_usd": 5.0,
+  "max_tokens_by_stage": {
+    "extract": 4000,
+    "support": 500,
+    "assemble": 4000,
+    "judge": 500
+  },
+  "datasets": {
+    "extract_cases_dir": "eval/datasets",
+    "extract_case_files": [
+      "case_1_clear_decision.json",
+      "case_2_pivot.json",
+      "case_3_multiple_rejected.json",
+      "case_4_no_reason.json",
+      "case_5_worklog_only.json",
+      "case_6_injection.json"
+    ],
+    "support_cases_file": "eval/datasets/support_cases.json",
+    "judge_cases_file": "eval/datasets/judge_cases.json"
+  },
+  "pricing_usd_per_million": {
+    "qwen/qwen3.7-flash": {
+      "input": 0.03,
+      "output": 0.13
+    },
+    "google/gemini-2.5-flash-lite": {
+      "input": 0.1,
+      "output": 0.4
+    },
+    "z-ai/glm-5.3-flash": {
+      "input": 0.075,
+      "output": 0.25
+    },
+    "deepseek/deepseek-v4.1-flash": {
+      "input": 0.15,
+      "output": 0.6
+    },
+    "openai/gpt-5.4-nano": {
+      "input": 0.2,
+      "output": 1.25
+    },
+    "anthropic/claude-opus-5": {
+      "input": 5.0,
+      "output": 25.0
+    }
+  },
+  "output": {
+    "results_dir": "eval/results",
+    "markdown": "eval/results/results.md",
+    "csv": "eval/results/results.csv",
+    "scatter_svg": "eval/results/cost_vs_quality.svg",
+    "calls_log": "eval/results/calls.jsonl",
+    "runs_log": "eval/results/runs.jsonl"
+  },
+  "_note": "pyyaml 非導入のため JSON。単価は eval/results/models.md から実行時に読む（pricing_usd_per_million は参考の写し）。",
+  "good_cheap_selection": "good＝段階1の抽出F1が最良で、極端に高価でないモデル。cheap＝十分な品質を保つ最安モデル。段階1・2の結果を見て configs コマンドの --good/--cheap で渡す。",
+  "reasoning_min_max_tokens": 16000,
+  "thinking_off_extra_body": {
+    "qwen/": {
+      "enable_thinking": false
+    },
+    "deepseek/": {
+      "thinking": {
+        "type": "disabled"
+      }
+    }
+  },
+  "thinking_uncontrollable": [
+    "z-ai/glm-5.3-flash"
+  ],
+  "_thinking_note": "2026-09-22 実測：deepseek は既定で思考あり（thinking={type:disabled} または reasoning_effort=none で停止）。glm-5.3-flash は enable_thinking/chat_template_kwargs/reasoning.enabled=false/reasoning_effort いずれでも止まらず、thinking={type:disabled} と reasoning_effort=none は 400。max_tokens=4000 では思考だけで上限に達し本文が空になるため、reasoning_min_max_tokens まで引き上げて実行する。"
+}

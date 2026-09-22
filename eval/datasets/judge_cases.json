@@ -1,0 +1,101 @@
+{
+  "description": "Judge 段階の評価データ。組み立て済みレポートの本文（見出しID → 文の配列）と、judge.txt のルーブリックに照らした正解の合否（人手で付与）。pass 4件・fail 4件。",
+  "cases": [
+    {
+      "case_id": "judge_pass_1_full",
+      "expected_status": "pass",
+      "note": "具体的な決定・理由・却下案・次の作業・現在地がそろっている。",
+      "sections": {
+        "decisions": ["新しいAPIはFastAPI(Python)で書き直す。", "DBはPostgreSQLに統一する。"],
+        "reasons": ["チームの主要言語がPythonで、分析基盤との連携がしやすく型安全性も得られるため。", "分析基盤と接続しやすく、運用するDBの種類を減らせるため。"],
+        "rejected_options": ["Node.js+TypeScriptでの書き直しは、分析基盤との親和性が低いため採用しなかった。"],
+        "next_steps": ["来週からエンドポイントの棚卸しを始め、マイグレーション計画を作る。"],
+        "current_status": ["技術選定が終わり、移行作業の着手前。"]
+      }
+    },
+    {
+      "case_id": "judge_pass_2_no_rejected",
+      "expected_status": "pass",
+      "note": "却下案が無いので rejected_options が空。それ以外はそろっている。",
+      "sections": {
+        "decisions": ["来月からステージング環境の構成をIaCで管理する。"],
+        "reasons": ["手動設定によるミスを防ぐため。"],
+        "rejected_options": [],
+        "next_steps": ["既存の手動設定を棚卸しする。"],
+        "current_status": ["ステージング環境は手動設定のまま稼働中。"]
+      }
+    },
+    {
+      "case_id": "judge_pass_3_pivot",
+      "expected_status": "pass",
+      "note": "方針転換が理由つきで具体的に書かれている。",
+      "sections": {
+        "decisions": ["プッシュ通知の基盤をFCMからAWS SNSに切り替える。"],
+        "reasons": ["FCMは一部の海外リージョンで平均10秒以上の配信遅延があり、SNSの実測遅延はその1/3だったため。"],
+        "rejected_options": ["FCMの継続利用は、配信遅延が業務要件を満たさないため取りやめた。"],
+        "next_steps": ["SNSへの移行手順を作る。"],
+        "current_status": ["FCMで実装済みの部分をSNSに置き換える段階。"]
+      }
+    },
+    {
+      "case_id": "judge_pass_4_multiple_rejected",
+      "expected_status": "pass",
+      "note": "採用1件・却下2件、いずれも理由つき。",
+      "sections": {
+        "decisions": ["検索の高速化はDBインデックスの見直しで行う。"],
+        "reasons": ["既存の構成を変えずに効果が見込めるため。"],
+        "rejected_options": ["Elasticsearchの導入は運用コストと学習コストが見合わないため却下した。", "キャッシュ層の追加は在庫データの整合性が崩れるおそれがあるため却下した。"],
+        "next_steps": ["遅いクエリの実行計画を洗い出す。"],
+        "current_status": ["方式が決まり、インデックス設計に入る前。"]
+      }
+    },
+    {
+      "case_id": "judge_fail_1_worklog",
+      "expected_status": "fail",
+      "note": "作業日記の羅列で、決定・却下・わかったことになっていない。",
+      "sections": {
+        "decisions": ["FastAPIのドキュメントを検索した。", "Expressのミドルウェアの一覧を調べた。"],
+        "reasons": [],
+        "rejected_options": [],
+        "next_steps": ["引き続きいろいろ試してみる。"],
+        "current_status": ["PostgreSQLの拡張機能をいくつか試した。", "ベンチマークツールをインストールした。"]
+      }
+    },
+    {
+      "case_id": "judge_fail_2_vague",
+      "expected_status": "fail",
+      "note": "決定事項が「検討する」「様子を見る」など曖昧なまま。",
+      "sections": {
+        "decisions": ["認証方式について引き続き検討する。", "DBの統一は状況を見ながら考える。"],
+        "reasons": ["いろいろな意見があったため。"],
+        "rejected_options": [],
+        "next_steps": ["また話し合う。"],
+        "current_status": ["方向性はまだ固まっていない。"]
+      }
+    },
+    {
+      "case_id": "judge_fail_3_no_reason",
+      "expected_status": "fail",
+      "note": "複数の決定に理由が1つも添えられていない。",
+      "sections": {
+        "decisions": ["新しいAPIはFastAPIで書き直す。", "DBはPostgreSQLに統一する。", "認証にGoogle OAuthを追加する。"],
+        "reasons": [],
+        "rejected_options": [],
+        "next_steps": ["移行作業に着手する。"],
+        "current_status": ["選定が終わった。"]
+      }
+    },
+    {
+      "case_id": "judge_fail_4_mixed",
+      "expected_status": "fail",
+      "note": "決定が曖昧で理由も無く、残りは作業日記。",
+      "sections": {
+        "decisions": ["キャッシュについては今後の検討課題とする。"],
+        "reasons": [],
+        "rejected_options": [],
+        "next_steps": ["Redisのドキュメントを読んだ。"],
+        "current_status": ["Elasticsearchを試しにインストールしてみた。", "ログを検索して調べた。"]
+      }
+    }
+  ]
+}

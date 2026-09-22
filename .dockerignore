@@ -1,0 +1,14 @@
+# 秘密と、worker のコンテナに要らないもの
+.env
+.env.*
+!.env.example
+.venv
+.git
+web
+design
+tests
+scripts
+db
+**/__pycache__
+.ruff_cache
+.pytest_cache
