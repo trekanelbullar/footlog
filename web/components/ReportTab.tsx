@@ -2,7 +2,6 @@ import type { Session } from "@/lib/auth";
 import { w10ListSources, w18ListReports, w19GetReport } from "@/lib/worker";
 import { newEventNos } from "@/lib/article";
 import ReportViewer from "@/components/ReportViewer";
-import VersionSwitcher from "@/components/VersionSwitcher";
 import AddSourceButton from "@/components/AddSourceButton";
 import { EmptyState } from "@/components/ui/Feedback";
 import type { TimelineItem } from "@/lib/worker-types";
@@ -65,9 +64,6 @@ export default async function ReportTab({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <VersionSwitcher pid={pid} reports={reports} currentVersion={target} />
-      </div>
       {/* 版が変わったら内部状態を確実にリセットするため key で再マウントする */}
       <ReportViewer
         key={report.version_no}

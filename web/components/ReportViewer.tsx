@@ -187,7 +187,7 @@ function SummaryItem({
   onNode: (nodeId: string) => void;
 }) {
   return (
-    <li className="text-[15px] leading-7 text-gray-900">
+    <li className="text-[15px] leading-8 text-[#2b2823]">
       {isNew && (
         <span className="mr-2 align-middle">
           <Chip tone="green">NEW</Chip>
@@ -218,7 +218,7 @@ function SummaryItem({
           type="button"
           onClick={() => onFootnote(n)}
           aria-label={`脚注${n}の根拠を開く`}
-          className="ml-1 align-super text-[11px] font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900 focus-visible:outline-2 focus-visible:outline-indigo-700"
+          className="ml-1 align-super text-[11px] font-bold text-[#b4541a] hover:underline focus-visible:outline-2 focus-visible:outline-[#b4541a]"
         >
           [{n}]
         </button>
@@ -335,97 +335,101 @@ function EvidencePanel({
   onClose: () => void;
   onSearchOpen: (r: EventSearchResult) => void;
 }) {
+  const quotes = !content ? (
+    <p className="text-xs leading-5 text-[#8a8175]">
+      脚注の番号や図の出来事を押すと、根拠の原文がここに表示されます。原本は中央の「原本ソース」や「資料」タブからも開けます。
+    </p>
+  ) : content.cards.length === 0 ? (
+    <p className="text-sm text-[#8a8175]">根拠が見つかりませんでした。</p>
+  ) : (
+    <ul className="flex flex-col gap-3">
+      {content.cards.map((c, i) => {
+        const source =
+          c.sourceNo !== null ? sourcesByNo.get(c.sourceNo) : undefined;
+        const when = c.recordedAt ?? source?.recorded_at ?? null;
+        return (
+          <li
+            key={`${c.label}-${i}`}
+            className="rounded-lg bg-[#efebe4] px-4 py-3"
+          >
+            <p className="text-[11px] font-semibold text-[#b4541a]">
+              {c.sourceNo !== null ? sourceName(source, c.sourceNo) : c.label}
+              {when ? ` ・ ${formatJst(when)}` : ""}
+            </p>
+            {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-6 text-[#2b2823]">
+              「{c.text}」
+            </p>
+            <p className="mt-1.5 text-[11px] text-[#8a8175]">
+              {c.label}
+              {c.speaker
+                ? ` ・ 話者 ${SPEAKER_LABEL[c.speaker] ?? c.speaker}`
+                : ""}
+            </p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  const aboutList = (
+    <section className="border-t border-[#e6e1d8] pt-5">
+      <h2 className="mb-3 text-xs font-semibold text-[#5b554c]">
+        この記録について
+      </h2>
+      <dl className="flex flex-col gap-2 text-xs">
+        {about.map(([k, v]) => (
+          <div key={k} className="flex items-center justify-between gap-3">
+            <dt className="text-[#5b554c]">{k}</dt>
+            <dd className="text-right text-[#2b2823]">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+
+  const title = (
+    <div className="mb-2 flex items-start justify-between gap-2">
+      <h2 className="text-sm font-semibold text-[#2b2823]">
+        {content ? content.title : "根拠"}
+      </h2>
+      {content && (
+        <Button variant="ghost" onClick={onClose} aria-label="根拠を閉じる">
+          ✕
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <aside
-      aria-label="根拠パネル"
-      className={`flex flex-col gap-5 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto ${
-        content
-          ? "fixed inset-x-0 bottom-0 z-30 max-h-[70vh] overflow-y-auto rounded-t-xl border-t border-gray-300 bg-white p-4 lg:static lg:rounded-none lg:border-0 lg:p-0"
-          : "hidden lg:flex"
-      }`}
-    >
-      <div className={content ? "hidden lg:block" : ""}>
-        <PanelSearch pid={pid} onOpen={onSearchOpen} />
-      </div>
-
-      <section aria-live="polite">
-        <div className="mb-2 flex items-start justify-between gap-2">
-          <h2 className="text-sm font-semibold text-gray-900">
-            {content ? content.title : "根拠"}
-          </h2>
-          {content && (
-            <Button variant="ghost" onClick={onClose} aria-label="根拠を閉じる">
-              ✕
-            </Button>
-          )}
-        </div>
-        {!content ? (
-          <p className="rounded-md border border-dashed border-gray-300 px-3 py-6 text-center text-sm text-gray-500">
-            本文の脚注番号や図の出来事を押すと、根拠の原文がここに出ます。
-          </p>
-        ) : content.cards.length === 0 ? (
-          <p className="text-sm text-gray-500">根拠が見つかりませんでした。</p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {content.cards.map((c, i) => {
-              const source =
-                c.sourceNo !== null ? sourcesByNo.get(c.sourceNo) : undefined;
-              const kind = sourceKind(source);
-              return (
-                <li
-                  key={`${c.label}-${i}`}
-                  className="rounded-md border border-gray-200 p-3"
-                >
-                  <div className="mb-2 flex items-center gap-2">
-                    <span
-                      className={`inline-flex h-6 min-w-8 items-center justify-center rounded px-1 text-[10px] font-bold ${kind.tone}`}
-                    >
-                      {kind.icon}
-                    </span>
-                    <span className="min-w-0 truncate text-xs font-medium text-gray-900">
-                      {c.sourceNo !== null
-                        ? sourceName(source, c.sourceNo)
-                        : c.label}
-                    </span>
-                  </div>
-                  {/* 原文は Markdown として解釈せず、テキストノードのまま一字一句表示する（I2）。 */}
-                  <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-900">
-                    {c.text}
-                  </p>
-                  <p className="mt-2 text-[11px] text-gray-500">
-                    {c.label}
-                    {c.speaker
-                      ? `・話者 ${SPEAKER_LABEL[c.speaker] ?? c.speaker}`
-                      : ""}
-                    {c.recordedAt
-                      ? `・${formatJst(c.recordedAt)}`
-                      : source
-                        ? `・${formatJst(source.recorded_at)}`
-                        : ""}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section
-        className={`border-t border-gray-200 pt-4 ${content ? "hidden lg:block" : ""}`}
+    <>
+      {/* PC：右カラムに固定 */}
+      <aside
+        aria-label="根拠パネル"
+        className="hidden flex-col gap-6 border-l border-[#e6e1d8] bg-[#fbfaf7] px-6 py-6 lg:flex"
       >
-        <h2 className="mb-2 text-sm font-semibold text-gray-900">
-          この記録について
-        </h2>
-        <dl className="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-1.5 text-xs">
-          {about.map(([k, v]) => (
-            <div key={k} className="contents">
-              <dt className="text-gray-500">{k}</dt>
-              <dd className="text-gray-900">{v}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    </aside>
+        <div className="sticky top-4 flex max-h-[calc(100vh-2rem)] flex-col gap-6 overflow-y-auto">
+          <div>
+            <p className="mb-2 text-xs font-semibold text-[#5b554c]">
+              出来事を検索
+            </p>
+            <PanelSearch pid={pid} onOpen={onSearchOpen} />
+          </div>
+          <section aria-live="polite">
+            {title}
+            {quotes}
+          </section>
+          {aboutList}
+        </div>
+      </aside>
+      {/* 1024px 未満：選んだときだけ下から出るシート */}
+      {content && (
+        <div className="fixed inset-x-0 bottom-0 z-30 max-h-[70vh] overflow-y-auto rounded-t-xl border-t border-[#e6e1d8] bg-[#fbfaf7] p-4 lg:hidden">
+          {title}
+          {quotes}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -630,14 +634,17 @@ export default function ReportViewer({
         {STATUS_LABEL[status]}
       </Chip>,
     ],
-    ["版", `v${report.version_no}`],
+    ["版", `第${report.version_no}版`],
     ["読者", report.audience === "managers" ? "マネージャー" : "全員"],
     ["未確認", `${unverifiedAiCount}件`],
     ["出来事", `${report.timeline.length}件`],
   ];
 
   const renderSection = (section: ArticleSection) => (
-    <section key={section.heading}>
+    <section
+      key={section.heading}
+      className="border-t border-[#e6e1d8] pt-6 first:border-t-0 first:pt-0"
+    >
       {section.kind === "rejected" && rejectedSimilarity.length > 0 && (
         <div className="mb-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           <span className="font-semibold">再浮上の警告：</span>
@@ -654,13 +661,16 @@ export default function ReportViewer({
           ))}
         </div>
       )}
-      <h3 className="mb-2 text-sm font-semibold text-gray-900">
+      <p className="text-[11px] font-bold tracking-[0.15em] text-[#b4541a]">
+        {section.label}
+      </p>
+      <h3 className="mt-1 mb-3 text-lg font-bold text-[#2b2823]">
         {section.heading}
       </h3>
       {section.items.length === 0 ? (
-        <p className="text-sm text-gray-500">該当する出来事はありません。</p>
+        <p className="text-sm text-[#8a8175]">該当する出来事はありません。</p>
       ) : (
-        <ul className="flex list-disc flex-col gap-2 pl-5 marker:text-gray-400">
+        <ul className="flex list-disc flex-col gap-2 pl-5 marker:text-[#b8afa2]">
           {section.items.map((item, i) => (
             <SummaryItem
               key={i}
@@ -676,29 +686,30 @@ export default function ReportViewer({
   );
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <article className="min-w-0 text-gray-900">
+    <div className="grid gap-8 lg:-mr-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+      <article className="min-w-0 text-[#2b2823]">
         {/* パンくず・メタデータ・タイトル（ui-spec-3col.md 2・3） */}
-        <header className="border-b border-gray-200 pb-6">
-          <nav aria-label="パンくず" className="text-xs text-gray-500">
-            決定ログ <span className="mx-1 text-gray-300">/</span> {projectName}
+        <header className="pb-2">
+          <nav aria-label="パンくず" className="text-xs text-[#8a8175]">
+            決定ログ <span className="mx-2 text-[#c9c1b5]">/</span>{" "}
+            {projectName}
           </nav>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Chip tone="gray">
-              v{report.version_no}
+              第{report.version_no}版
               {report.audience === "managers" ? "・管理者向け" : ""}
             </Chip>
             <Chip tone={STATUS_TONE[status]}>{STATUS_LABEL[status]}</Chip>
             {fresh.size > 0 && <Chip tone="green">NEW {fresh.size}件</Chip>}
-            <span className="ml-auto text-xs text-gray-500">
-              最終更新 {formatJst(report.generated_at)}
+            <span className="ml-auto text-xs text-[#8a8175]">
+              {formatJst(report.generated_at)} 更新
             </span>
           </div>
-          <h1 className="mt-4 max-w-[720px] break-words text-[28px] font-bold leading-snug md:text-[32px]">
+          <h1 className="mt-5 max-w-[720px] break-words text-[28px] font-bold leading-[1.45] text-[#2b2823] md:text-[32px]">
             {headline ? headline.summary : `${projectName} の記録`}
           </h1>
           {lead && (
-            <p className="mt-3 max-w-[720px] text-sm leading-relaxed text-gray-600">
+            <p className="mt-3 max-w-[720px] text-sm leading-relaxed text-[#5b554c]">
               {lead}
             </p>
           )}
@@ -711,28 +722,29 @@ export default function ReportViewer({
           </p>
         )}
 
-        {/* AI要約ブロック（ui-spec-3col.md 4）：地の文と区別する枠と背景 */}
-        <section
-          aria-label="AIによる自動生成"
-          className="mt-6 rounded-lg border border-indigo-100 bg-indigo-50/40 p-5"
-        >
-          <p className="mb-4 flex items-center gap-2 text-xs font-medium text-indigo-800">
-            <svg
-              aria-hidden
-              viewBox="0 0 16 16"
-              className="size-4 fill-current"
-            >
+        {/* AI要約ブロック（ui-spec-3col.md 4）：AIの印とラベルを必ず付け、本文を字下げして地の文と分ける */}
+        <section aria-label="AIによる自動要約" className="mt-6 flex gap-3">
+          <span
+            aria-hidden
+            className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-[#1f1d1a] text-white"
+          >
+            <svg viewBox="0 0 16 16" className="size-3.5 fill-current">
               <path d="M8 1l1.6 3.9L13.5 6 9.6 7.6 8 11.5 6.4 7.6 2.5 6l3.9-1.1L8 1zm4.5 8l.8 1.9 1.7.6-1.7.7-.8 1.8-.8-1.8-1.7-.7 1.7-.6.8-1.9z" />
             </svg>
-            AIによる自動生成 — {logCount}件の会話ログと{docCount}件の資料から
-          </p>
-          <div className="flex flex-col gap-6">
-            {sections.map(renderSection)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="mb-4 text-[11px] font-semibold text-[#8a8175]">
+              AIによる自動要約 — {logCount}件の会話ログと{docCount}
+              件の資料から生成
+            </p>
+            <div className="flex max-w-[720px] flex-col gap-6">
+              {sections.map(renderSection)}
+            </div>
           </div>
         </section>
 
         {/* 図（タイムライン） */}
-        <figure className="mt-8">
+        <figure className="mt-10 border-t border-[#e6e1d8] pt-8">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-base font-semibold">決定の流れ</h2>
             <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">
@@ -747,7 +759,7 @@ export default function ReportViewer({
             </ul>
           </div>
           {diagramState !== "failed" ? (
-            <div className="overflow-x-auto rounded-md border border-gray-200 p-3">
+            <div className="overflow-x-auto rounded-lg border border-[#e6e1d8] bg-white p-3">
               {diagramState === "loading" && (
                 <p className="py-8 text-sm text-gray-500">
                   図を描画しています…
@@ -818,31 +830,31 @@ export default function ReportViewer({
         </figure>
 
         {/* 原本ソース一覧（ui-spec-3col.md 5） */}
-        <section className="mt-8">
-          <h2 className="mb-3 text-base font-semibold">
+        <section className="mt-10 border-t border-[#e6e1d8] pt-8">
+          <h2 className="mb-3 text-sm font-semibold text-[#5b554c]">
             原本ソース（{sources.length}件）
           </h2>
           {sources.length === 0 ? (
             <p className="text-sm text-gray-500">資料はまだありません。</p>
           ) : (
-            <ul className="divide-y divide-gray-200 rounded-md border border-gray-200">
+            <ul className="flex max-w-[520px] flex-col gap-2">
               {sources.map((s) => {
                 const kind = sourceKind(s);
                 return (
                   <li key={s.source_id}>
                     <Link
                       href={`/projects/${pid}/sources#source-${s.source_id}`}
-                      className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-gray-900"
+                      className="flex items-center gap-3 rounded-lg border border-[#e2ddd3] bg-white px-3 py-2.5 hover:border-[#c9c1b5] focus-visible:outline-2 focus-visible:outline-[#b4541a]"
                     >
                       <span
                         className={`inline-flex h-7 min-w-9 items-center justify-center rounded px-1 text-[10px] font-bold ${kind.tone}`}
                       >
                         {kind.icon}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-sm text-gray-900">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-[#2b2823]">
                         {sourceName(s, s.source_no)}
                       </span>
-                      <span className="shrink-0 text-xs text-gray-500">
+                      <span className="shrink-0 text-xs text-[#8a8175]">
                         {s.is_excluded ? "除外中・" : ""}
                         {formatJst(s.recorded_at).slice(0, 10)}
                       </span>
@@ -854,7 +866,7 @@ export default function ReportViewer({
           )}
           {/* 除外の件数と内訳は manager にだけ届く（worker が member には null を返す） */}
           {report.excluded_summary && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-3 text-xs text-[#8a8175]">
               除外されたソース {report.excluded_summary.count}件（
               {(Object.keys(REASON_LABEL) as ExcludeReason[])
                 .map(

@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 export type ChipTone = "gray" | "orange" | "green" | "amber" | "red" | "indigo";
 
 const TONE: Record<ChipTone, string> = {
-  gray: "border-gray-300 bg-gray-50 text-gray-700",
-  orange: "border-orange-300 bg-orange-50 text-orange-800",
-  green: "border-green-300 bg-green-50 text-green-800",
+  gray: "border-transparent bg-[#e8e4dc] text-[#4a453d]",
+  orange: "border-transparent bg-[#fbe3d3] text-[#b4541a]",
+  green: "border-transparent bg-[#dff0dc] text-[#3d7a3a]",
   amber: "border-amber-300 bg-amber-50 text-amber-800",
   red: "border-red-300 bg-red-50 text-red-700",
   indigo: "border-indigo-300 bg-indigo-50 text-indigo-800",
@@ -21,7 +21,7 @@ export default function Chip({
 }) {
   return (
     <span
-      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${TONE[tone]}`}
+      className={`inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${TONE[tone]}`}
     >
       {children}
     </span>
