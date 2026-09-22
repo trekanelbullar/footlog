@@ -161,3 +161,66 @@ def test_ingest_file_reupload_by_different_user_creates_separate_source(
         assert result_a.source_id != result_b.source_id
         assert result_a.source_no != result_b.source_no
         assert result_b.version_no == 1  # b にとっては新規ソース（既存の版を上書きしない）
+
+
+def test_ingest_file_unreadable_is_registered_without_segments(
+    migrated_database_url: str, settings: WorkerSettings
+) -> None:
+    """抽出に失敗したファイルはエラーにせず、ファイル名だけを記録する（区切りは作らない）。"""
+
+    with psycopg.connect(migrated_database_url) as conn:
+        pid = _insert_project(conn)
+        result = ingest.ingest_file(
+            conn,
+            project_id=pid,
+            uploaded_by=uuid4(),
+            filename="broken.docx",
+            data=b"not a zip file",
+            recorded_at=None,
+            visibility="all",
+            settings=settings,
+            storage_transport=_upload_ok_transport(),
+        )
+        conn.commit()
+
+        assert result.extraction_failed is True
+        assert result.segment_count == 0
+        row = conn.execute(
+            "SELECT filename FROM project_sources WHERE id = %s", (result.source_id,)
+        ).fetchone()
+        assert row == ("broken.docx",)
+        count = conn.execute(
+            "SELECT COUNT(*) FROM source_segments WHERE project_id = %s", (pid,)
+        ).fetchone()[0]
+        assert count == 0
+
+
+def test_ingest_file_caps_segments_at_limit(
+    migrated_database_url: str, settings: WorkerSettings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """区切りが上限を超えたら先頭から打ち切り、truncated を立てる。"""
+
+    monkeypatch.setattr(ingest, "MAX_SEGMENTS_PER_FILE", 3)
+    with psycopg.connect(migrated_database_url) as conn:
+        pid = _insert_project(conn)
+        result = ingest.ingest_file(
+            conn,
+            project_id=pid,
+            uploaded_by=uuid4(),
+            filename="many.txt",
+            data="\n\n".join(f"段落{n}" for n in range(1, 6)).encode(),
+            recorded_at=None,
+            visibility="all",
+            settings=settings,
+            storage_transport=_upload_ok_transport(),
+        )
+        conn.commit()
+
+        assert result.truncated is True
+        texts = [
+            r[0]
+            for r in conn.execute(
+                "SELECT text FROM source_segments WHERE project_id = %s ORDER BY seq", (pid,)
+            ).fetchall()
+        ]
+        assert texts == ["段落1", "段落2", "段落3"]

@@ -25,6 +25,8 @@ from ai_hackathon_team_a.segment import RawSegment
 from ai_hackathon_team_a.worker_settings import WorkerSettings
 
 _SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
+# 1ファイルの区切り数の上限。超えたら先頭から打ち切り、応答で警告する。
+MAX_SEGMENTS_PER_FILE = 2000
 
 
 @dataclass(frozen=True)
@@ -40,6 +42,10 @@ class IngestResult:
     # AD-8：W8（会話の貼り付け）だけで埋める、話者の目印の内訳。それ以外の取り込み
     # （W9・W23）では使わないので None のまま。
     speaker_counts: dict[str, int] | None = None
+    # W9 だけで使う：文字を抽出できなかった（ファイル名だけを記録し、区切りは作らない）、
+    # 区切りが上限を超えたので先頭から打ち切った。
+    extraction_failed: bool = False
+    truncated: bool = False
 
     @property
     def label_prefix(self) -> str:
@@ -123,11 +129,16 @@ def ingest_file(
     再アップロードでは ``visibility`` の入力を無視する。
     """
 
+    # 抽出に失敗したファイルはエラーにせず、ファイル名だけを記録する（区切りは作らないので
+    # レポートには載らない）。
     try:
         extracted = extract_text.extract_text(filename, data)
-    except ExtractionError as exc:
-        raise ApiError(400, "invalid_file", str(exc)) from exc
+        extraction_failed = False
+    except ExtractionError:
+        extracted = extract_text.ExtractedContent(text="")
+        extraction_failed = True
 
+    redacted_blocks: list[tuple[int, str]] | None = None
     if extracted.rows is not None:
         redacted_rows: list[tuple[str, str]] = []
         redaction_count = 0
@@ -136,6 +147,15 @@ def ingest_file(
             redacted_rows.append((locator, clean))
             redaction_count += count
         full_text = "\n".join(text for _, text in redacted_rows)
+    elif extracted.blocks is not None:
+        redacted_rows = None
+        redacted_blocks = []
+        redaction_count = 0
+        for number, line in extracted.blocks:
+            clean, count = redact(line)
+            redacted_blocks.append((number, clean))
+            redaction_count += count
+        full_text = "\n".join(text for _, text in redacted_blocks)
     else:
         redacted_rows = None
         full_text, redaction_count = redact(extracted.text)
@@ -208,10 +228,16 @@ def ingest_file(
         storage_path=storage_path,
     )
 
-    if redacted_rows is not None:
+    if extraction_failed:
+        raw_segments = []
+    elif redacted_rows is not None:
         raw_segments = segment.segment_spreadsheet(redacted_rows)
+    elif redacted_blocks is not None:
+        raw_segments = segment.segment_blocks(redacted_blocks)
     else:
         raw_segments = segment.segment_text_file(full_text)
+    truncated = len(raw_segments) > MAX_SEGMENTS_PER_FILE
+    raw_segments = raw_segments[:MAX_SEGMENTS_PER_FILE]
 
     inserted = _insert_segments(
         conn,
@@ -233,6 +259,8 @@ def ingest_file(
         segment_count=len(inserted),
         new_segment_count=sum(inserted),
         redaction_count=redaction_count,
+        extraction_failed=extraction_failed,
+        truncated=truncated,
     )
 
 
@@ -456,5 +484,13 @@ def _safe_filename(filename: str) -> str:
     return _SAFE_FILENAME_RE.sub("_", base) or "file"
 
 
+_OFFICE_CONTENT_TYPES = {
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
+
 def _guess_content_type(filename: str) -> str:
-    return mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    office = _OFFICE_CONTENT_TYPES.get(Path(filename).suffix.lower())
+    return office or mimetypes.guess_type(filename)[0] or "application/octet-stream"

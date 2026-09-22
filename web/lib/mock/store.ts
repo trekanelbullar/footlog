@@ -904,6 +904,8 @@ const ALLOWED_FILE_EXTENSIONS = new Set([
   ".js",
   ".json",
   ".xlsx",
+  ".docx",
+  ".pptx",
   ".pdf",
 ]);
 const MAX_FILE_BYTES = 10 * 1024 * 1024;

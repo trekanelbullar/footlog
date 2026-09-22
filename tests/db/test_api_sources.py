@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import httpx
 import psycopg
+import pytest
 from fastapi.testclient import TestClient
 
 from ai_hackathon_team_a.api import app
@@ -125,6 +126,27 @@ def test_create_file_source_rejects_xlsm(
 
     assert response.status_code == 400
     assert response.json()["error"] == "unsupported_file_type"
+
+
+@pytest.mark.parametrize("name", ["old.xls", "old.doc", "old.ppt", "macro.xlsm"])
+def test_create_file_source_asks_to_resave_old_formats(
+    api_client: TestClient, migrated_database_url: str, auth_headers: AuthHeaders, name: str
+) -> None:
+    user_id = uuid4()
+    with psycopg.connect(migrated_database_url) as conn:
+        pid = _insert_project(conn)
+        _insert_member(conn, project_id=pid, user_id=user_id, email="u@example.test", role="member")
+
+    response = api_client.post(
+        f"/internal/projects/{pid}/sources/file",
+        headers=auth_headers(user_id),
+        files={"file": (name, b"dummy", "application/octet-stream")},
+        data={"visibility": "all"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "unsupported_file_type"
+    assert "新しい形式（.xlsx / .docx / .pptx）で保存し直してください" in response.json()["message"]
 
 
 def test_create_file_source_rejects_oversized(

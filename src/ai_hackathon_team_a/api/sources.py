@@ -26,7 +26,21 @@ from ai_hackathon_team_a.worker_settings import WorkerSettings, get_worker_setti
 router = APIRouter(dependencies=[Depends(require_worker_secret)])
 
 # 拡張子の許可リスト（設計書 §4 の1）。.xlsm はここに無いので拒否される。
-_ALLOWED_EXTENSIONS = {".txt", ".md", ".csv", ".py", ".ts", ".js", ".json", ".xlsx", ".pdf"}
+_ALLOWED_EXTENSIONS = {
+    ".txt",
+    ".md",
+    ".csv",
+    ".py",
+    ".ts",
+    ".js",
+    ".json",
+    ".xlsx",
+    ".docx",
+    ".pptx",
+    ".pdf",
+}
+# 古い形式とマクロ付きの形式は受け付けず、新しい形式で保存し直すよう案内する。
+_RESAVE_EXTENSIONS = {".xls", ".doc", ".ppt", ".xlsm"}
 _MAX_FILE_BYTES = 10 * 1024 * 1024
 _MAX_PASTE_CHARS = 200_000
 
@@ -98,6 +112,13 @@ def create_file_source(
 
     filename = file.filename or ""
     suffix = Path(filename).suffix.lower()
+    if suffix in _RESAVE_EXTENSIONS:
+        raise ApiError(
+            400,
+            "unsupported_file_type",
+            f"{suffix} は取り込めません。"
+            "新しい形式（.xlsx / .docx / .pptx）で保存し直してください。",
+        )
     if suffix not in _ALLOWED_EXTENSIONS:
         raise ApiError(
             400, "unsupported_file_type", f"{suffix or '(拡張子なし)'} は取り込めません。"
@@ -125,6 +146,9 @@ def create_file_source(
         "segment_count": result.segment_count,
         "new_segment_count": result.new_segment_count,
         "redaction_count": result.redaction_count,
+        "extraction_failed": result.extraction_failed,
+        "truncated": result.truncated,
+        "segment_limit": ingest.MAX_SEGMENTS_PER_FILE,
     }
 
 

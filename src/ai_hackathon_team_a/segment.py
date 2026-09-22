@@ -85,8 +85,40 @@ def segment_text_file(text: str) -> list[RawSegment]:
     return segments
 
 
+def segment_blocks(blocks: list[tuple[int, str]]) -> list[RawSegment]:
+    """Word の区切り：テキストと同じ規則（空行か20行ごと）。locator は「段落3」「段落3-7」。
+
+    ``blocks`` は (段落番号, 1行の文字)。空の文字は空行（区切りの境目）。
+    """
+
+    segments: list[RawSegment] = []
+    current: list[tuple[int, str]] = []
+
+    def flush() -> None:
+        if current:
+            first, last = current[0][0], current[-1][0]
+            locator = f"段落{first}" if first == last else f"段落{first}-{last}"
+            segments.append(
+                RawSegment(text="\n".join(t for _, t in current), speaker=None, locator=locator)
+            )
+            current.clear()
+
+    for number, text in blocks:
+        if not text.strip():
+            flush()
+            continue
+        current.append((number, text))
+        if len(current) >= _MAX_FILE_LINES:
+            flush()
+    flush()
+    return segments
+
+
 def segment_spreadsheet(rows: list[tuple[str, str]]) -> list[RawSegment]:
-    """スプレッドシートの区切り：1行＝1区切り。``rows`` は (locator, 行のCSV文字列)。"""
+    """1単位＝1区切り（スプレッドシートの1行、スライド1枚、ノート1つ）。
+
+    ``rows`` は (locator, 文字)。
+    """
 
     return [
         RawSegment(text=row_text, speaker=None, locator=locator)

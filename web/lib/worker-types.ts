@@ -192,6 +192,10 @@ export interface CreateSourceOutput {
   new_segment_count?: number;
   /** AD-8：W8（会話の貼り付け）だけが返す。worker の古い版が返さなくても落ちないよう任意にする。 */
   speaker_counts?: SpeakerCounts;
+  /** W9 だけが返す：文字を抽出できなかった（ファイル名だけ記録）、区切りを上限で打ち切った。 */
+  extraction_failed?: boolean;
+  truncated?: boolean;
+  segment_limit?: number;
 }
 
 /** W9 入力（multipart のうち file 以外のフィールド） */
