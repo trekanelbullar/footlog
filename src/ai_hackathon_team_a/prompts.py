@@ -22,6 +22,7 @@ PROMPT_NAMES: tuple[str, ...] = (
     "assemble_diff",
     "assemble_baseline",
     "judge",
+    "topics",
 )
 
 

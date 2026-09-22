@@ -300,6 +300,8 @@ export interface ReportFlags {
   unverified_ai_count: number;
   /** AD-10：任意。無ければ警告なしとして扱う。 */
   rejected_similarity: RejectedSimilarityFlag[];
+  /** 図の論点のまとまり（2026-09-22 追加）。無い版は1本の時系列。 */
+  topics: { name: string; event_nos: number[] }[];
 }
 
 export interface TimelineItem {

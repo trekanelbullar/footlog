@@ -98,7 +98,9 @@ const PanelContext = createContext<{
 
 /** worker の DSL（flowchart TD）を、横長の時系列にして、種類ごとの色を付ける。 */
 function styledDsl(dsl: string, report: ReportDetail): string {
-  const lr = dsl.replace(/^flowchart TD\b/, "flowchart LR");
+  // 論点ごとのレーン（subgraph）がある版は、worker が縦に積んだ形（TD、各レーンの中は LR）のまま使う。
+  const hasLanes = /^\s*subgraph T\d+/m.test(dsl);
+  const lr = hasLanes ? dsl : dsl.replace(/^flowchart TD\b/, "flowchart LR");
   const present = new Set(
     [...lr.matchAll(/^\s*(E\d+)[[({>/]/gm)].map((m) => m[1]),
   );
@@ -109,6 +111,9 @@ function styledDsl(dsl: string, report: ReportDetail): string {
     byKind.set(t.kind, [...(byKind.get(t.kind) ?? []), id]);
   }
   const lines = [lr.trimEnd()];
+  for (const m of lr.matchAll(/^\s*subgraph (T\d+)/gm)) {
+    lines.push(`  style ${m[1]} fill:#ffffff,stroke:#d9d3c7,color:#141414`);
+  }
   for (const [kind, ids] of byKind) {
     lines.push(`  classDef k_${kind} ${KIND_STYLE[kind].classDef}`);
     lines.push(`  class ${ids.join(",")} k_${kind}`);
@@ -425,6 +430,25 @@ export default function ReportViewer({
   );
   const quoteCount = Object.keys(report.footnotes).length;
 
+  // 図が描けないときの箇条書きも、図と同じく論点ごとに分ける（どこにも入らない出来事は「その他」）。
+  const topics = report.flags.topics ?? [];
+  const inTopic = new Set(topics.flatMap((t) => t.event_nos));
+  const listGroups: { name: string | null; items: typeof sortedTimeline }[] =
+    topics.length > 1
+      ? [
+          ...topics.map((t) => ({
+            name: t.name,
+            items: sortedTimeline.filter((i) =>
+              t.event_nos.includes(i.event_no),
+            ),
+          })),
+          {
+            name: "その他",
+            items: sortedTimeline.filter((i) => !inTopic.has(i.event_no)),
+          },
+        ].filter((g) => g.items.length > 0)
+      : [{ name: null, items: sortedTimeline }];
+
   const renderSection = (section: ArticleSection) => (
     <section key={section.heading} className="border-t border-ink pt-8">
       <Kicker>{section.label}</Kicker>
@@ -646,43 +670,57 @@ export default function ReportViewer({
                 表示できる出来事がありません。
               </p>
             ) : (
-              <ol className="mt-4 pb-4">
-                {sortedTimeline.map((item) => (
-                  <li
-                    key={item.event_no}
-                    className="border-t border-rule first:border-t-0"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => openNode(`E${item.event_no}`)}
-                      className="grid w-full grid-cols-[1.25rem_1fr] gap-x-3 py-3 text-left md:grid-cols-[1.25rem_9rem_1fr]"
-                    >
-                      <span
-                        className={`${KIND_STYLE[item.kind]?.glyphClass ?? ""} text-lg leading-6`}
-                      >
-                        {KIND_STYLE[item.kind]?.glyph ?? "・"}
-                      </span>
-                      <span className="text-xs leading-6 text-[#6b655a] md:text-sm">
-                        {formatJst(item.occurred_at)} ・{" "}
-                        {KIND_LABEL[item.kind] ?? item.kind}
-                        {fresh.has(item.event_no) && (
-                          <span className="ml-2 font-bold text-accent">
-                            NEW
-                          </span>
-                        )}
-                      </span>
-                      <span className="col-start-2 text-[15px] leading-relaxed md:col-start-3">
-                        {item.summary}
-                      </span>
-                    </button>
-                  </li>
+              <div className="mt-4 pb-4">
+                {listGroups.map((group) => (
+                  <div key={group.name ?? "all"} className="mb-4 last:mb-0">
+                    {group.name && (
+                      <p className="border-b border-ink pb-1 text-xs font-bold tracking-[0.15em] text-ink">
+                        {group.name}
+                      </p>
+                    )}
+                    <ol>
+                      {group.items.map((item) => (
+                        <li
+                          key={item.event_no}
+                          className="border-t border-rule first:border-t-0"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => openNode(`E${item.event_no}`)}
+                            className="grid w-full grid-cols-[1.25rem_1fr] gap-x-3 py-3 text-left md:grid-cols-[1.25rem_9rem_1fr]"
+                          >
+                            <span
+                              className={`${KIND_STYLE[item.kind]?.glyphClass ?? ""} text-lg leading-6`}
+                            >
+                              {KIND_STYLE[item.kind]?.glyph ?? "・"}
+                            </span>
+                            <span className="text-xs leading-6 text-[#6b655a] md:text-sm">
+                              {formatJst(item.occurred_at)} ・{" "}
+                              {KIND_LABEL[item.kind] ?? item.kind}
+                              {fresh.has(item.event_no) && (
+                                <span className="ml-2 font-bold text-accent">
+                                  NEW
+                                </span>
+                              )}
+                            </span>
+                            <span className="col-start-2 text-[15px] leading-relaxed md:col-start-3">
+                              {item.summary}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
                 ))}
-              </ol>
+              </div>
             )}
 
             <figcaption className="border-t border-rule py-3 text-xs leading-relaxed text-[#6b655a]">
-              図　この版までの出来事を、左から古い順に並べたもの（
-              {report.timeline.length}件）。
+              図　この版までの出来事（{report.timeline.length}件）を、
+              {topics.length > 1
+                ? "論点ごとの段に分け、各段の中で左から古い順に"
+                : "左から古い順に"}
+              並べたもの。
               形と色は出来事の種類を表す。項目を押すと、右に根拠の原文が出る。
             </figcaption>
           </figure>

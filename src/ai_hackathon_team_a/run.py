@@ -43,6 +43,7 @@ from ai_hackathon_team_a.pipeline.judge import assemble_and_judge
 from ai_hackathon_team_a.pipeline.mermaid import MermaidEvent, build_mermaid
 from ai_hackathon_team_a.pipeline.render import RenderEvent, render_markdown
 from ai_hackathon_team_a.pipeline.support import check_support
+from ai_hackathon_team_a.pipeline.topics import group_topics
 from ai_hackathon_team_a.worker_settings import WorkerSettings
 
 logger = logging.getLogger(__name__)
@@ -1089,7 +1090,8 @@ def _build_report(
         )
         for e in active_events
     ]
-    mermaid_dsl = build_mermaid(mermaid_events)
+    topics = group_topics(event_summaries, llm_fn, goal_description=goal_description)
+    mermaid_dsl = build_mermaid(mermaid_events, topics)
 
     input_segment_ids = sorted(
         {sid for e in active_events for sid in e.segment_ids} | rejected_evidence_labels
@@ -1103,6 +1105,8 @@ def _build_report(
         "suspected_injection": sorted(suspected_injection_labels),
         "unverified_ai_count": rendered.unverified_ai_count,
         "rejected_similarity": rejected_flags,
+        # 図の論点のまとまり（この版に載る出来事の番号だけ）。web が箇条書きの見出しにも使う。
+        "topics": [t.model_dump() for t in topics],
     }
 
     return _BuiltReport(

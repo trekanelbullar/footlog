@@ -132,6 +132,13 @@ class Sentence(BaseModel):
     no_evidence: bool  # 機械の検査で「根拠なし」になったか
 
 
+class Topic(BaseModel):
+    """図を論点ごとのレーンに分けるための、話題のまとまり（LLM は分け方だけを返す）。"""
+
+    name: str
+    event_nos: list[int]
+
+
 class AssembleOutput(BaseModel):
     """レポートの組み立ての出力。"""
 

@@ -127,3 +127,49 @@ def test_same_occurred_at_breaks_tie_by_event_no() -> None:
         "  E1 --> E2",
         "  E2 --> E3",
     ]
+
+
+def test_topics_build_stacked_lanes_with_other_lane_last() -> None:
+    """論点ごとのレーン：レーンの中は古い順につなぎ、どこにも入らない出来事は「その他」へ。"""
+
+    from ai_hackathon_team_a.pipeline.contracts import Topic
+
+    t0 = datetime(2026, 9, 21, 9, 0, tzinfo=UTC)
+    events = [
+        _event(1, "decision", "Cloud Run", occurred_at=t0),
+        _event(2, "rejected_option", "env をイメージに", occurred_at=t0.replace(hour=10)),
+        _event(3, "decision", "Resend", occurred_at=t0.replace(hour=11)),
+        _event(4, "open_issue", "文面", occurred_at=t0.replace(hour=12)),
+        _event(5, "status", "順調", occurred_at=t0.replace(hour=13)),
+    ]
+    topics = [
+        Topic(name="通知(メール)", event_nos=[4, 3]),
+        Topic(name="デプロイ", event_nos=[1, 2]),
+    ]
+
+    dsl = build_mermaid(events, topics)
+    lines = dsl.splitlines()
+
+    assert lines[0] == "flowchart TD"
+    # レーンの順は最も古い出来事の時刻順：デプロイ → 通知 → その他
+    assert [ln.strip() for ln in lines if ln.strip().startswith("subgraph")] == [
+        'subgraph T1["デプロイ"]',
+        'subgraph T2["通知（メール）"]',
+        'subgraph T3["その他"]',
+    ]
+    assert "    E1 --> E2" in lines
+    assert "    E3 --> E4" in lines
+    assert "  T1 ~~~ T2" in lines and "  T2 ~~~ T3" in lines
+    # レーンをまたぐ時系列の矢印は引かない
+    assert "    E2 --> E3" not in lines and "  E2 --> E3" not in lines
+
+
+def test_single_topic_falls_back_to_one_timeline() -> None:
+    """まとまりが1つしかできなければ、今までどおりの1本の時系列（C12 の形）。"""
+
+    from ai_hackathon_team_a.pipeline.contracts import Topic
+
+    events = [_event(1, "decision", "A"), _event(2, "decision", "B")]
+    dsl = build_mermaid(events, [Topic(name="全部", event_nos=[1, 2])])
+
+    _assert_every_line_matches(dsl)
