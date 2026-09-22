@@ -10,7 +10,8 @@
 内容を読み解き、決定・却下案・未解決事項を仕分けた資料を定期的に作り直します。
 進捗があれば関係者にメールで通知し、一定期間進捗がないときはアラートを出します。
 
-![生成される決定ログ資料の画面](./docs/images/decision-log-sample.png)
+<img width="956" height="756" alt="スクリーンショット 2026-09-22 14 12 52" src="https://github.com/user-attachments/assets/bc3f7570-02a4-4aca-a2b9-8abcf09b848d" />
+
 
 詳細な設計思想は[こちらの記事](https://qiita.com/aym__/items/63904650641ec10e46f9)、
 仕様は`design/`の設計書を参照してください（現段階ではどちらも作成中の部分があります）。
