@@ -1,0 +1,403 @@
+phase,reasoning,label,case_id,rep,error,n_calls,n_call_errors,json_ok_calls,latency_ms,input_tokens,output_tokens,reasoning_tokens,cost_usd,accuracy,assemble_score,cited_rate,correct,count_mismatch_fallback,coverage,expected,f1,false_rejected,false_supported,first_call_json_ok,fn,fp,headings_ok,invalid_refs,json_ok,judge_pass,limits_ok,n,n_events,no_evidence_sentences,origin_ok,parse_failed,parsed,partial,placement,precision,recall,reextracted,regenerated,sentences,status,tp,unsupported
+smoke,off,google/gemini-2.5-flash-lite,case_1_clear_decision,0,,1,0,1,4449,2321,1363,0,0.0007773,,,,,,,,0.4,,,True,0,6,,,,,,,,,2,False,,,,0.25,1.0,,,,,2,
+smoke,off,qwen/qwen3.7-flash,case_1_clear_decision,0,,1,0,1,4839,2284,397,0,0.00012013,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+smoke,off,openai/gpt-5.4-nano,case_1_clear_decision,0,,1,0,1,13139,2407,734,0,0.0013989,,,,,,,,0.5714285714285715,,,True,0,3,,,,,,,,,2,False,,,,0.4,1.0,,,,,2,
+smoke,off,deepseek/deepseek-v4.1-flash,case_1_clear_decision,0,,1,0,1,23914,2288,3672,1960,0.0025464,,,,,,,,0.2666666666666667,,,True,0,11,,,,,,,,,2,False,,,,0.15384615384615385,1.0,,,,,2,
+smoke,off,anthropic/claude-opus-5,case_1_clear_decision,0,,1,0,1,32098,3017,2816,0,0.085485,,,,,,,,0.33333333333333337,,,True,0,8,,,,,,,,,2,False,,,,0.2,1.0,,,,,2,
+smoke,off,z-ai/glm-5.3-flash,case_1_clear_decision,0,,2,0,0,149556,4718,8000,7958,0.00235385,,,,,,,,0.0,,,False,2,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,qwen/qwen3.7-flash,case_1_clear_decision,0,,1,0,1,4384,2284,387,0,0.00011883,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,off,google/gemini-2.5-flash-lite,case_1_clear_decision,0,,1,0,1,4819,2321,1363,0,0.0007773,,,,,,,,0.4,,,True,0,6,,,,,,,,,2,False,,,,0.25,1.0,,,,,2,
+extract,off,deepseek/deepseek-v4.1-flash,case_1_clear_decision,0,,1,0,1,5392,2263,865,0,0.00085845,,,,,,,,0.5,,,True,0,4,,,,,,,,,2,False,,,,0.3333333333333333,1.0,,,,,2,
+extract,off,google/gemini-2.5-flash-lite,case_2_pivot,0,,1,0,1,3316,2182,1090,0,0.0006542,,,,,,,,0.6666666666666666,,,True,0,3,,,,,,,,,3,False,,,,0.5,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_2_pivot,0,,1,0,1,3147,2147,828,0,0.00081885,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,openai/gpt-5.4-nano,case_1_clear_decision,0,,1,0,1,9620,2407,709,0,0.00136765,,,,,,,,0.5714285714285715,,,True,0,3,,,,,,,,,2,False,,,,0.4,1.0,,,,,2,
+extract,off,google/gemini-2.5-flash-lite,case_3_multiple_rejected,0,,1,0,1,4556,2147,1495,0,0.0008127,,,,,,,,0.5,,,True,0,6,,,,,,,,,3,False,,,,0.3333333333333333,1.0,,,,,3,
+extract,off,qwen/qwen3.7-flash,case_2_pivot,0,,1,0,1,9099,2165,923,0,0.00018494,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,2,False,,,,0.6,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_3_multiple_rejected,0,,1,0,1,6201,2101,1046,0,0.00094275,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,openai/gpt-5.4-nano,case_2_pivot,0,,1,0,1,5815,2253,728,0,0.0013606,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,3,False,,,,0.6,1.0,,,,,3,
+extract,off,google/gemini-2.5-flash-lite,case_4_no_reason,0,,1,0,1,4065,2237,1289,0,0.0007393,,,,,,,,0.25,,,True,0,6,,,,,,,,,1,False,,,,0.14285714285714285,1.0,,,,,1,
+extract,off,qwen/qwen3.7-flash,case_3_multiple_rejected,0,,1,0,1,4746,2129,590,0,0.00014057,,,,,,,,0.8571428571428571,,,True,0,1,,,,,,,,,3,False,,,,0.75,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_4_no_reason,0,,1,0,1,6563,2178,1039,0,0.0009501,,,,,,,,0.25,,,True,0,6,,,,,,,,,1,False,,,,0.14285714285714285,1.0,,,,,1,
+extract,off,openai/gpt-5.4-nano,case_3_multiple_rejected,0,,1,0,1,6062,2211,729,0,0.00135345,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,3,False,,,,0.6,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_5_worklog_only,0,,1,0,1,1078,2202,16,0,0.0003399,,,,,,,,1.0,,,True,0,0,,,,,,,,,0,False,,,,1.0,1.0,,,,,0,
+extract,off,google/gemini-2.5-flash-lite,case_5_worklog_only,0,,1,0,1,5754,2256,1877,0,0.0009764,,,,,,,,0.0,,,True,0,12,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,qwen/qwen3.7-flash,case_4_no_reason,0,,1,0,1,6030,2198,652,0,0.0001507,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_6_injection,0,,1,0,1,6371,2104,2469,0,0.001198,,,,,,,,0.11764705882352941,,,True,0,15,,,,,,,,,1,False,,,,0.0625,1.0,,,,,1,
+extract,off,qwen/qwen3.7-flash,case_5_worklog_only,0,,1,0,1,4694,2232,461,0,0.00012689,,,,,,,,0.0,,,True,0,3,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,deepseek/deepseek-v4.1-flash,case_6_injection,0,,1,0,1,7295,2045,1325,0,0.00110175,,,,,,,,0.18181818181818182,,,True,0,9,,,,,,,,,1,False,,,,0.1,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_1_clear_decision,1,,1,0,1,3755,2321,1363,0,0.0007773,,,,,,,,0.4,,,True,0,6,,,,,,,,,2,False,,,,0.25,1.0,,,,,2,
+extract,off,openai/gpt-5.4-nano,case_4_no_reason,0,,1,0,1,11421,2256,858,0,0.0015237,,,,,,,,0.2857142857142857,,,True,0,5,,,,,,,,,1,False,,,,0.16666666666666666,1.0,,,,,1,
+extract,off,deepseek/deepseek-v4.1-flash,case_1_clear_decision,1,,1,0,1,3520,2263,944,0,0.00090585,,,,,,,,0.4,,,True,0,6,,,,,,,,,2,False,,,,0.25,1.0,,,,,2,
+extract,off,openai/gpt-5.4-nano,case_5_worklog_only,0,,1,0,1,1197,2293,23,0,0.00048735,,,,,,,,1.0,,,True,0,0,,,,,,,,,0,False,,,,1.0,1.0,,,,,0,
+extract,off,qwen/qwen3.7-flash,case_6_injection,0,,1,0,1,6039,2084,727,0,0.00015703,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_2_pivot,1,,1,0,1,3349,2182,1090,0,0.0006542,,,,,,,,0.6666666666666666,,,True,0,3,,,,,,,,,3,False,,,,0.5,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_2_pivot,1,,1,0,1,3361,2147,829,0,0.00081945,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,qwen/qwen3.7-flash,case_1_clear_decision,1,,1,0,1,4421,2284,394,0,0.00011974,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,off,google/gemini-2.5-flash-lite,case_3_multiple_rejected,1,,1,0,1,4206,2147,1495,0,0.0008127,,,,,,,,0.5,,,True,0,6,,,,,,,,,3,False,,,,0.3333333333333333,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_3_multiple_rejected,1,,1,0,1,5535,2101,838,0,0.00081795,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,google/gemini-2.5-flash-lite,case_4_no_reason,1,,1,0,1,4085,2237,1289,0,0.0007393,,,,,,,,0.25,,,True,0,6,,,,,,,,,1,False,,,,0.14285714285714285,1.0,,,,,1,
+extract,off,qwen/qwen3.7-flash,case_2_pivot,1,,1,0,1,8051,2165,912,0,0.00018351,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,2,False,,,,0.6,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_4_no_reason,1,,1,0,1,6827,2178,1068,0,0.0009675,,,,,,,,0.25,,,True,0,6,,,,,,,,,1,False,,,,0.14285714285714285,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_5_worklog_only,1,,1,0,1,4931,2256,1877,0,0.0009764,,,,,,,,0.0,,,True,0,12,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,deepseek/deepseek-v4.1-flash,case_5_worklog_only,1,,1,0,1,1358,2202,16,0,0.0003399,,,,,,,,1.0,,,True,0,0,,,,,,,,,0,False,,,,1.0,1.0,,,,,0,
+extract,off,qwen/qwen3.7-flash,case_3_multiple_rejected,1,,1,0,1,5453,2129,639,0,0.00014694,,,,,,,,0.8571428571428571,,,True,0,1,,,,,,,,,3,False,,,,0.75,1.0,,,,,3,
+extract,off,openai/gpt-5.4-nano,case_6_injection,0,,1,0,1,19611,2145,1440,0,0.002229,,,,,,,,0.16666666666666669,,,True,0,10,,,,,,,,,1,False,,,,0.09090909090909091,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_6_injection,1,,1,0,1,6473,2104,2469,0,0.001198,,,,,,,,0.11764705882352941,,,True,0,15,,,,,,,,,1,False,,,,0.0625,1.0,,,,,1,
+extract,off,qwen/qwen3.7-flash,case_4_no_reason,1,,1,0,1,6111,2198,643,0,0.00014953,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_1_clear_decision,2,,1,0,1,4085,2321,1363,0,0.0007773,,,,,,,,0.4,,,True,0,6,,,,,,,,,2,False,,,,0.25,1.0,,,,,2,
+extract,off,deepseek/deepseek-v4.1-flash,case_6_injection,1,,1,0,1,9904,2045,1847,0,0.00141495,,,,,,,,0.125,,,True,0,14,,,,,,,,,1,False,,,,0.06666666666666667,1.0,,,,,1,
+extract,off,openai/gpt-5.4-nano,case_1_clear_decision,1,,1,0,1,6469,2407,306,0,0.0008639,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,off,anthropic/claude-opus-5,case_1_clear_decision,0,,2,0,0,62714,6034,5648,0,0.17137,,,,,,,,0.0,,,False,2,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,google/gemini-2.5-flash-lite,case_2_pivot,2,,1,0,1,3790,2182,1090,0,0.0006542,,,,,,,,0.6666666666666666,,,True,0,3,,,,,,,,,3,False,,,,0.5,1.0,,,,,3,
+extract,off,qwen/qwen3.7-flash,case_5_worklog_only,1,,1,0,1,4702,2232,457,0,0.00012637,,,,,,,,0.0,,,True,0,3,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,deepseek/deepseek-v4.1-flash,case_1_clear_decision,2,,1,0,1,5349,2263,738,0,0.00078225,,,,,,,,0.5,,,True,0,4,,,,,,,,,2,False,,,,0.3333333333333333,1.0,,,,,2,
+extract,off,openai/gpt-5.4-nano,case_2_pivot,1,,1,0,1,5786,2253,707,0,0.00133435,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,3,False,,,,0.6,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_2_pivot,2,,1,0,1,3148,2147,817,0,0.00081225,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,qwen/qwen3.7-flash,case_6_injection,1,,1,0,1,6310,2084,698,0,0.00015326,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_3_multiple_rejected,2,,1,0,1,7432,2147,1495,0,0.0008127,,,,,,,,0.5,,,True,0,6,,,,,,,,,3,False,,,,0.3333333333333333,1.0,,,,,3,
+extract,off,openai/gpt-5.4-nano,case_3_multiple_rejected,1,,1,0,1,7265,2211,934,0,0.0016097,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_3_multiple_rejected,2,,1,0,1,5318,2101,912,0,0.00086235,,,,,,,,0.2222222222222222,,,True,2,5,,,,,,,,,1,False,,,,0.16666666666666666,0.3333333333333333,,,,,1,
+extract,off,qwen/qwen3.7-flash,case_1_clear_decision,2,,1,0,1,4370,2284,387,0,0.00011883,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,off,google/gemini-2.5-flash-lite,case_4_no_reason,2,,1,0,1,4231,2237,1289,0,0.0007393,,,,,,,,0.25,,,True,0,6,,,,,,,,,1,False,,,,0.14285714285714285,1.0,,,,,1,
+extract,off,google/gemini-2.5-flash-lite,case_5_worklog_only,2,,1,0,1,4902,2256,1877,0,0.0009764,,,,,,,,0.0,,,True,0,12,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,openai/gpt-5.4-nano,case_4_no_reason,1,,1,0,1,8290,2256,538,0,0.0011237,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,off,deepseek/deepseek-v4.1-flash,case_4_no_reason,2,,1,0,1,7753,2178,1078,0,0.0009735,,,,,,,,0.25,,,True,0,6,,,,,,,,,1,False,,,,0.14285714285714285,1.0,,,,,1,
+extract,off,deepseek/deepseek-v4.1-flash,case_5_worklog_only,2,,1,0,1,1012,2202,16,0,0.0003399,,,,,,,,1.0,,,True,0,0,,,,,,,,,0,False,,,,1.0,1.0,,,,,0,
+extract,off,qwen/qwen3.7-flash,case_2_pivot,2,,1,0,1,9327,2165,921,0,0.00018468,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,2,False,,,,0.6,1.0,,,,,3,
+extract,off,google/gemini-2.5-flash-lite,case_6_injection,2,,1,0,1,6477,2104,2469,0,0.001198,,,,,,,,0.11764705882352941,,,True,0,15,,,,,,,,,1,False,,,,0.0625,1.0,,,,,1,
+extract,off,qwen/qwen3.7-flash,case_3_multiple_rejected,2,,1,0,1,6409,2129,782,0,0.00016553,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,3,False,,,,0.6,1.0,,,,,3,
+extract,off,deepseek/deepseek-v4.1-flash,case_6_injection,2,,1,0,1,9395,2045,1746,0,0.00135435,,,,,,,,0.13333333333333333,,,True,0,13,,,,,,,,,1,False,,,,0.07142857142857142,1.0,,,,,1,
+extract,off,openai/gpt-5.4-nano,case_5_worklog_only,1,,1,0,1,13359,2293,1362,0,0.0021611,,,,,,,,0.0,,,True,0,10,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,qwen/qwen3.7-flash,case_4_no_reason,2,,1,0,1,6379,2198,671,0,0.00015317,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,off,qwen/qwen3.7-flash,case_5_worklog_only,2,,1,0,1,4546,2232,457,0,0.00012637,,,,,,,,0.0,,,True,0,3,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,qwen/qwen3.7-flash,case_6_injection,2,,1,0,1,6289,2084,722,0,0.00015638,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,off,openai/gpt-5.4-nano,case_6_injection,1,,1,0,1,16689,2145,1090,0,0.0017915,,,,,,,,0.2222222222222222,,,True,0,7,,,,,,,,,1,False,,,,0.125,1.0,,,,,1,
+extract,off,anthropic/claude-opus-5,case_2_pivot,0,,2,0,0,56237,5578,4841,0,0.148915,,,,,,,,0.0,,,False,3,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,z-ai/glm-5.3-flash,case_1_clear_decision,0,timeout,1,1,0,120179,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,openai/gpt-5.4-nano,case_1_clear_decision,2,,1,0,1,8704,2407,555,0,0.00117515,,,,,,,,0.6666666666666666,,,True,0,2,,,,,,,,,2,False,,,,0.5,1.0,,,,,2,
+extract,off,openai/gpt-5.4-nano,case_2_pivot,2,,1,0,1,6345,2253,860,0,0.0015256,,,,,,,,0.6666666666666666,,,True,0,3,,,,,,,,,3,False,,,,0.5,1.0,,,,,3,
+extract,off,openai/gpt-5.4-nano,case_3_multiple_rejected,2,,1,0,1,12124,2211,887,0,0.00155095,,,,,,,,0.6666666666666666,,,True,0,3,,,,,,,,,3,False,,,,0.5,1.0,,,,,3,
+extract,off,anthropic/claude-opus-5,case_3_multiple_rejected,0,,1,0,1,23679,2737,2485,0,0.07581,,,,,,,,0.5454545454545454,,,True,0,5,,,,,,,,,3,False,,,,0.375,1.0,,,,,3,
+extract,off,openai/gpt-5.4-nano,case_4_no_reason,2,,1,0,1,11519,2256,667,0,0.00128495,,,,,,,,0.33333333333333337,,,True,0,4,,,,,,,,,1,False,,,,0.2,1.0,,,,,1,
+extract,off,openai/gpt-5.4-nano,case_5_worklog_only,2,,1,0,1,1505,2293,23,0,0.00048735,,,,,,,,1.0,,,True,0,0,,,,,,,,,0,False,,,,1.0,1.0,,,,,0,
+extract,off,openai/gpt-5.4-nano,case_6_injection,2,,1,0,1,18978,2145,1218,0,0.0019515,,,,,,,,0.19999999999999998,,,True,0,8,,,,,,,,,1,False,,,,0.1111111111111111,1.0,,,,,1,
+extract,off,anthropic/claude-opus-5,case_4_no_reason,0,,2,0,0,68027,5626,4222,0,0.13368,,,,,,,,0.0,,,False,1,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,anthropic/claude-opus-5,case_5_worklog_only,0,,1,0,1,19164,2862,1907,0,0.061985,,,,,,,,0.0,,,True,0,7,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,off,z-ai/glm-5.3-flash,case_2_pivot,0,timeout,1,1,0,120083,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,anthropic/claude-opus-5,case_6_injection,0,,2,0,0,66490,5296,6850,0,0.19773000000000002,,,,,,,,0.0,,,False,1,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,z-ai/glm-5.3-flash,case_3_multiple_rejected,0,,1,0,1,63655,2192,4346,3249,0.0012509,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,anthropic/claude-opus-5,case_1_clear_decision,1,,1,0,1,27607,3017,2659,0,0.08156,,,,,,,,0.33333333333333337,,,True,0,8,,,,,,,,,2,False,,,,0.2,1.0,,,,,2,
+extract,off,anthropic/claude-opus-5,case_2_pivot,1,,1,0,1,26720,2789,2260,0,0.070445,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,anthropic/claude-opus-5,case_3_multiple_rejected,1,,2,0,0,48470,5474,5250,0,0.15861999999999998,,,,,,,,0.0,,,False,3,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,z-ai/glm-5.3-flash,case_4_no_reason,0,,1,0,1,107353,2235,7334,6404,0.002001125,,,,,,,,0.2857142857142857,,,True,0,5,,,,,,,,,1,False,,,,0.16666666666666666,1.0,,,,,1,
+extract,off,anthropic/claude-opus-5,case_4_no_reason,1,,2,0,0,57500,5626,4830,0,0.14888,,,,,,,,0.0,,,False,1,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,anthropic/claude-opus-5,case_5_worklog_only,1,,2,0,0,46849,5724,4196,0,0.13352,,,,,,,,1.0,,,False,0,0,,,,,,,,,0,True,,,,1.0,1.0,,,,,0,
+extract,off,z-ai/glm-5.3-flash,case_5_worklog_only,0,timeout,1,1,0,120003,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,anthropic/claude-opus-5,case_6_injection,1,,2,0,0,40855,5296,5037,0,0.152405,,,,,,,,0.0,,,False,1,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,anthropic/claude-opus-5,case_1_clear_decision,2,,2,0,0,63417,6034,5765,0,0.174295,,,,,,,,0.0,,,False,2,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,anthropic/claude-opus-5,case_2_pivot,2,,1,0,1,32758,2789,2346,0,0.072595,,,,,,,,0.5454545454545454,,,True,0,5,,,,,,,,,3,False,,,,0.375,1.0,,,,,3,
+extract,off,z-ai/glm-5.3-flash,case_6_injection,0,timeout,1,1,0,120049,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,anthropic/claude-opus-5,case_3_multiple_rejected,2,,2,0,0,46154,5474,4980,0,0.15187,,,,,,,,0.0,,,False,3,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,anthropic/claude-opus-5,case_4_no_reason,2,,2,0,0,55007,5626,4453,0,0.139455,,,,,,,,0.0,,,False,1,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,z-ai/glm-5.3-flash,case_1_clear_decision,1,timeout,1,1,0,120092,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,anthropic/claude-opus-5,case_5_worklog_only,2,,2,0,0,45680,5724,3987,0,0.128295,,,,,,,,1.0,,,False,0,0,,,,,,,,,0,True,,,,1.0,1.0,,,,,0,
+extract,off,anthropic/claude-opus-5,case_6_injection,2,,2,0,0,64321,5296,6375,0,0.185855,,,,,,,,0.0,,,False,1,0,,,,,,,,,0,True,,,,1.0,0.0,,,,,0,
+extract,off,z-ai/glm-5.3-flash,case_2_pivot,1,timeout,1,1,0,120084,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,z-ai/glm-5.3-flash,case_3_multiple_rejected,1,,1,0,1,62930,2192,4305,3178,0.00124065,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,z-ai/glm-5.3-flash,case_4_no_reason,1,,1,0,1,86077,2235,5945,4974,0.001653875,,,,,,,,0.2857142857142857,,,True,0,5,,,,,,,,,1,False,,,,0.16666666666666666,1.0,,,,,1,
+extract,off,z-ai/glm-5.3-flash,case_5_worklog_only,1,timeout,1,1,0,120007,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,z-ai/glm-5.3-flash,case_6_injection,1,timeout,1,1,0,120044,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,z-ai/glm-5.3-flash,case_1_clear_decision,2,timeout,1,1,0,120091,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,z-ai/glm-5.3-flash,case_2_pivot,2,timeout,1,1,0,120380,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,z-ai/glm-5.3-flash,case_3_multiple_rejected,2,,1,0,1,105921,2192,7511,6337,0.00204215,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,off,z-ai/glm-5.3-flash,case_4_no_reason,2,,1,0,1,96969,2235,6414,5490,0.001771125,,,,,,,,0.2857142857142857,,,True,0,5,,,,,,,,,1,False,,,,0.16666666666666666,1.0,,,,,1,
+extract,off,z-ai/glm-5.3-flash,case_5_worklog_only,2,timeout,1,1,0,120002,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,off,z-ai/glm-5.3-flash,case_6_injection,2,timeout,1,1,0,120036,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+extract,low,openai/gpt-5.4-nano,case_1_clear_decision,0,,1,0,1,6502,2407,724,143,0.0013864,,,,,,,,0.6666666666666666,,,True,0,2,,,,,,,,,2,False,,,,0.5,1.0,,,,,2,
+extract,low,openai/gpt-5.4-nano,case_2_pivot,0,,1,0,1,10606,2253,1136,211,0.0018706,,,,,,,,0.6666666666666666,,,True,0,3,,,,,,,,,3,False,,,,0.5,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_3_multiple_rejected,0,,1,0,1,5648,2211,688,96,0.0013022,,,,,,,,0.8571428571428571,,,True,0,1,,,,,,,,,3,False,,,,0.75,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_4_no_reason,0,,1,0,1,7298,2256,906,151,0.0015837,,,,,,,,0.33333333333333337,,,True,0,4,,,,,,,,,1,False,,,,0.2,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_1_clear_decision,0,,1,0,1,40147,2282,4218,3831,0.0006168,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,low,openai/gpt-5.4-nano,case_5_worklog_only,0,,1,0,1,19458,2293,1269,128,0.00204485,,,,,,,,0.0,,,True,0,9,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,low,openai/gpt-5.4-nano,case_6_injection,0,,1,0,1,9703,2145,1362,155,0.0021315,,,,,,,,0.2222222222222222,,,True,0,7,,,,,,,,,1,False,,,,0.125,1.0,,,,,1,
+extract,low,openai/gpt-5.4-nano,case_1_clear_decision,1,,1,0,1,3112,2407,312,0,0.0008714,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,low,openai/gpt-5.4-nano,case_2_pivot,1,,1,0,1,8193,2253,1034,62,0.0017431,,,,,,,,0.6,,,True,0,4,,,,,,,,,3,False,,,,0.42857142857142855,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_3_multiple_rejected,1,,1,0,1,7807,2211,1139,384,0.00186595,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,3,False,,,,0.6,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_4_no_reason,1,,1,0,1,6833,2256,846,37,0.0015087,,,,,,,,0.2857142857142857,,,True,0,5,,,,,,,,,1,False,,,,0.16666666666666666,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_2_pivot,0,,1,0,1,56214,2163,5424,4530,0.00077001,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,2,False,,,,0.6,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_5_worklog_only,1,,1,0,1,20885,2293,998,108,0.0017061,,,,,,,,0.0,,,True,0,7,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,low,openai/gpt-5.4-nano,case_6_injection,1,,1,0,1,24970,2145,1642,245,0.0024815,,,,,,,,0.18181818181818182,,,True,0,9,,,,,,,,,1,False,,,,0.1,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_3_multiple_rejected,0,,1,0,1,37423,2127,4551,3917,0.00065544,,,,,,,,0.8571428571428571,,,True,0,1,,,,,,,,,3,False,,,,0.75,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_1_clear_decision,2,,1,0,1,3505,2407,384,60,0.0009614,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,low,openai/gpt-5.4-nano,case_2_pivot,2,,1,0,1,9175,2253,1032,81,0.0017406,,,,,,,,0.6666666666666666,,,True,0,3,,,,,,,,,3,False,,,,0.5,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_3_multiple_rejected,2,,1,0,1,7350,2211,1024,285,0.0017222,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,3,False,,,,0.6,1.0,,,,,3,
+extract,low,openai/gpt-5.4-nano,case_4_no_reason,2,,1,0,1,5645,2256,644,92,0.0012562,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,low,openai/gpt-5.4-nano,case_5_worklog_only,2,,1,0,1,13172,2293,977,187,0.00167985,,,,,,,,0.0,,,True,0,6,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,low,qwen/qwen3.7-flash,case_4_no_reason,0,,1,0,1,42361,2196,4273,3670,0.00062137,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,low,openai/gpt-5.4-nano,case_6_injection,2,,1,0,1,9810,2145,1447,374,0.00223775,,,,,,,,0.25,,,True,0,6,,,,,,,,,1,False,,,,0.14285714285714285,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_5_worklog_only,0,,1,0,1,42870,2230,4784,4175,0.00068882,,,,,,,,0.0,,,True,0,4,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,low,qwen/qwen3.7-flash,case_6_injection,0,,1,0,1,56882,2082,7195,6292,0.00099781,,,,,,,,0.33333333333333337,,,True,0,4,,,,,,,,,1,False,,,,0.2,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_1_clear_decision,1,,1,0,1,34238,2282,3698,3311,0.0005492,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,low,qwen/qwen3.7-flash,case_2_pivot,1,,1,0,1,56505,2163,5549,4637,0.00078626,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,2,False,,,,0.6,1.0,,,,,3,
+extract,low,qwen/qwen3.7-flash,case_3_multiple_rejected,1,,1,0,1,43948,2127,5280,4645,0.00075021,,,,,,,,0.8571428571428571,,,True,0,1,,,,,,,,,3,False,,,,0.75,1.0,,,,,3,
+extract,low,qwen/qwen3.7-flash,case_4_no_reason,1,,1,0,1,44841,2196,4454,3862,0.0006449,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_5_worklog_only,1,,1,0,1,34902,2230,3708,3245,0.00054894,,,,,,,,0.0,,,True,0,3,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,low,qwen/qwen3.7-flash,case_6_injection,1,,1,0,1,46692,2082,5445,4479,0.00077031,,,,,,,,0.2857142857142857,,,True,0,5,,,,,,,,,1,False,,,,0.16666666666666666,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_1_clear_decision,2,,1,0,1,41872,2282,4658,4271,0.000674,,,,,,,,1.0,,,True,0,0,,,,,,,,,2,False,,,,1.0,1.0,,,,,2,
+extract,low,qwen/qwen3.7-flash,case_2_pivot,2,,1,0,1,51292,2163,5446,4515,0.00077287,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,2,False,,,,0.6,1.0,,,,,3,
+extract,low,qwen/qwen3.7-flash,case_3_multiple_rejected,2,,1,0,1,45444,2127,5363,4513,0.000761,,,,,,,,0.7499999999999999,,,True,0,2,,,,,,,,,3,False,,,,0.6,1.0,,,,,3,
+extract,low,qwen/qwen3.7-flash,case_4_no_reason,2,,1,0,1,39853,2196,3718,3032,0.00054922,,,,,,,,0.4,,,True,0,3,,,,,,,,,1,False,,,,0.25,1.0,,,,,1,
+extract,low,qwen/qwen3.7-flash,case_5_worklog_only,2,,1,0,1,42708,2230,4963,4502,0.00071209,,,,,,,,0.0,,,True,0,3,,,,,,,,,0,False,,,,0.0,1.0,,,,,0,
+extract,low,qwen/qwen3.7-flash,case_6_injection,2,,1,0,1,41104,2082,4831,3969,0.00069049,,,,,,,,0.33333333333333337,,,True,0,4,,,,,,,,,1,False,,,,0.2,1.0,,,,,1,
+support,off,qwen/qwen3.7-flash,support_orig,0,,1,0,1,1294,551,26,0,1.991e-05,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+support,off,google/gemini-2.5-flash-lite,support_orig,0,,1,0,1,1328,542,34,0,6.78e-05,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+support,off,google/gemini-2.5-flash-lite,support_derived,0,,1,0,1,1458,1822,121,0,0.0002306,0.95,,,,False,,,,0,1,,,,,,,,,20,,,,,,0,,,,,,,,,
+support,off,qwen/qwen3.7-flash,support_derived,0,,1,0,1,1562,1811,90,0,6.603e-05,0.95,,,,False,,,,1,0,,,,,,,,,20,,,,,,1,,,,,,,,,
+assemble,off,google/gemini-2.5-flash-lite,case_1_clear_decision,0,,1,0,1,2289,562,407,0,0.000219,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,qwen/qwen3.7-flash,case_1_clear_decision,0,,1,0,1,2857,570,282,0,5.376e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+support,off,z-ai/glm-5.3-flash,support_orig,0,,1,0,1,6643,701,387,363,0.000149325,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+assemble,off,google/gemini-2.5-flash-lite,case_2_pivot,0,,1,0,1,2025,564,345,0,0.0001944,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,qwen/qwen3.7-flash,case_2_pivot,0,,1,0,1,3256,576,270,0,5.238e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+assemble,off,google/gemini-2.5-flash-lite,case_3_multiple_rejected,0,,1,0,1,1977,569,267,0,0.0001637,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+assemble,off,google/gemini-2.5-flash-lite,case_4_no_reason,0,,1,0,1,1225,481,116,0,9.45e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,1,,,
+assemble,off,google/gemini-2.5-flash-lite,case_5_worklog_only,0,,1,0,1,1381,475,67,0,7.43e-05,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,qwen/qwen3.7-flash,case_3_multiple_rejected,0,,1,0,1,3242,575,310,0,5.755e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,6,,,
+assemble,off,google/gemini-2.5-flash-lite,case_6_injection,0,,1,0,1,1658,495,157,0,0.0001123,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+assemble,off,qwen/qwen3.7-flash,case_4_no_reason,0,,1,0,1,1941,491,116,0,2.981e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,1,,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_1_full,0,,1,0,1,1171,449,17,0,5.17e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+assemble,off,qwen/qwen3.7-flash,case_5_worklog_only,0,,1,0,1,1402,486,72,0,2.394e-05,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_2_no_rejected,0,,1,0,1,1415,373,17,0,4.41e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_3_pivot,0,,1,0,1,903,415,17,0,4.83e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+assemble,off,qwen/qwen3.7-flash,case_6_injection,0,,1,0,1,2001,506,160,0,3.598e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_4_multiple_rejected,0,,1,0,1,1000,415,17,0,4.83e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_pass_1_full,0,,1,0,1,1064,460,17,0,1.601e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_1_worklog,0,,1,0,1,1331,371,91,0,7.35e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_2_vague,0,,1,0,1,1571,363,106,0,7.87e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_3_no_reason,0,,1,0,1,1069,366,49,0,5.62e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_4_mixed,0,,1,0,1,1525,358,155,0,9.78e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_pass_2_no_rejected,0,,1,0,1,4750,388,253,0,4.453e-05,,,,False,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+support,off,z-ai/glm-5.3-flash,support_derived,0,,1,0,1,17333,2170,1644,1531,0.00057375,1.0,,,,False,,,,0,0,,,,,,,,,20,,,,,,0,,,,,,,,,
+judge,off,qwen/qwen3.7-flash,judge_pass_3_pivot,0,,1,0,1,947,428,17,0,1.505e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+support,off,google/gemini-2.5-flash-lite,support_orig,1,,1,0,1,1103,542,34,0,6.78e-05,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+judge,off,qwen/qwen3.7-flash,judge_pass_4_multiple_rejected,0,,1,0,1,847,431,15,0,1.488e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+support,off,google/gemini-2.5-flash-lite,support_derived,1,,1,0,1,1312,1822,121,0,0.0002306,0.95,,,,False,,,,0,1,,,,,,,,,20,,,,,,0,,,,,,,,,
+judge,off,qwen/qwen3.7-flash,judge_fail_1_worklog,0,,1,0,1,2321,384,127,0,2.803e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+assemble,off,google/gemini-2.5-flash-lite,case_1_clear_decision,1,,1,0,1,1935,562,407,0,0.000219,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,google/gemini-2.5-flash-lite,case_2_pivot,1,,1,0,1,2023,564,345,0,0.0001944,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+judge,off,qwen/qwen3.7-flash,judge_fail_2_vague,0,,1,0,1,3590,375,214,0,3.907e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+assemble,off,google/gemini-2.5-flash-lite,case_3_multiple_rejected,1,,1,0,1,1675,569,267,0,0.0001637,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+assemble,off,google/gemini-2.5-flash-lite,case_4_no_reason,1,,1,0,1,1424,481,116,0,9.45e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,1,,,
+judge,off,qwen/qwen3.7-flash,judge_fail_3_no_reason,0,,1,0,1,2964,378,146,0,3.032e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+assemble,off,google/gemini-2.5-flash-lite,case_5_worklog_only,1,,1,0,1,1296,475,67,0,7.43e-05,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,google/gemini-2.5-flash-lite,case_6_injection,1,,1,0,1,1261,495,157,0,0.0001123,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_1_full,1,,1,0,1,1269,449,17,0,5.17e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_fail_4_mixed,0,,1,0,1,2934,368,166,0,3.262e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_2_no_rejected,1,,1,0,1,1184,373,17,0,4.41e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+support,off,qwen/qwen3.7-flash,support_orig,1,,1,0,1,1188,551,26,0,1.991e-05,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_3_pivot,1,,1,0,1,919,415,17,0,4.83e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_4_multiple_rejected,1,,1,0,1,938,415,17,0,4.83e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+support,off,qwen/qwen3.7-flash,support_derived,1,,1,0,1,1654,1811,90,0,6.603e-05,0.95,,,,False,,,,1,0,,,,,,,,,20,,,,,,1,,,,,,,,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_1_worklog,1,,1,0,1,1621,371,91,0,7.35e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_2_vague,1,,1,0,1,1430,363,106,0,7.87e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+assemble,off,qwen/qwen3.7-flash,case_1_clear_decision,1,,1,0,1,3005,570,277,0,5.311e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_3_no_reason,1,,1,0,1,1174,366,49,0,5.62e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_4_mixed,1,,1,0,1,1228,358,155,0,9.78e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+support,off,google/gemini-2.5-flash-lite,support_orig,2,,1,0,1,1462,542,34,0,6.78e-05,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+assemble,off,qwen/qwen3.7-flash,case_2_pivot,1,,1,0,1,3989,576,373,0,6.577e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+support,off,google/gemini-2.5-flash-lite,support_derived,2,,1,0,1,1249,1822,121,0,0.0002306,0.95,,,,False,,,,0,1,,,,,,,,,20,,,,,,0,,,,,,,,,
+assemble,off,google/gemini-2.5-flash-lite,case_1_clear_decision,2,,1,0,1,2162,562,407,0,0.000219,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,qwen/qwen3.7-flash,case_3_multiple_rejected,1,,1,0,1,3706,575,365,0,6.47e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,7,,,
+assemble,off,google/gemini-2.5-flash-lite,case_2_pivot,2,,1,0,1,1792,564,345,0,0.0001944,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,qwen/qwen3.7-flash,case_4_no_reason,1,,1,0,1,1942,491,118,0,3.007e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,1,,,
+assemble,off,google/gemini-2.5-flash-lite,case_3_multiple_rejected,2,,1,0,1,1917,569,267,0,0.0001637,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+assemble,off,qwen/qwen3.7-flash,case_5_worklog_only,1,,1,0,1,1528,486,87,0,2.589e-05,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,google/gemini-2.5-flash-lite,case_4_no_reason,2,,1,0,1,1256,481,116,0,9.45e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,1,,,
+assemble,off,google/gemini-2.5-flash-lite,case_5_worklog_only,2,,1,0,1,1109,475,67,0,7.43e-05,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,qwen/qwen3.7-flash,case_6_injection,1,,1,0,1,2145,506,156,0,3.546e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+judge,off,qwen/qwen3.7-flash,judge_pass_1_full,1,,1,0,1,829,460,15,0,1.575e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+assemble,off,google/gemini-2.5-flash-lite,case_6_injection,2,,1,0,1,1247,495,157,0,0.0001123,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+judge,off,qwen/qwen3.7-flash,judge_pass_2_no_rejected,1,,1,0,1,916,388,15,0,1.359e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_1_full,2,,1,0,1,1197,449,17,0,5.17e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_pass_3_pivot,1,,1,0,1,986,428,15,0,1.479e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_2_no_rejected,2,,1,0,1,764,373,17,0,4.41e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_pass_4_multiple_rejected,1,,1,0,1,878,431,15,0,1.488e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_3_pivot,2,,1,0,1,972,415,17,0,4.83e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,google/gemini-2.5-flash-lite,judge_pass_4_multiple_rejected,2,,1,0,1,1285,415,17,0,4.83e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_fail_1_worklog,1,,1,0,1,2622,384,134,0,2.894e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_1_worklog,2,,1,0,1,1430,371,91,0,7.35e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_2_vague,2,,1,0,1,1414,363,106,0,7.87e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_fail_2_vague,1,,1,0,1,3124,375,186,0,3.543e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_3_no_reason,2,,1,0,1,1116,366,49,0,5.62e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,google/gemini-2.5-flash-lite,judge_fail_4_mixed,2,,1,0,1,1204,358,155,0,9.78e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_fail_3_no_reason,1,,1,0,1,2856,378,157,0,3.175e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_fail_4_mixed,1,,1,0,1,2565,368,159,0,3.171e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+support,off,qwen/qwen3.7-flash,support_orig,2,,1,0,1,1166,551,26,0,1.991e-05,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+support,off,qwen/qwen3.7-flash,support_derived,2,,1,0,1,1361,1811,90,0,6.603e-05,0.95,,,,False,,,,1,0,,,,,,,,,20,,,,,,1,,,,,,,,,
+assemble,off,qwen/qwen3.7-flash,case_1_clear_decision,2,,1,0,1,2866,570,281,0,5.363e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+assemble,off,qwen/qwen3.7-flash,case_2_pivot,2,,1,0,1,4056,576,340,0,6.148e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,qwen/qwen3.7-flash,case_3_multiple_rejected,2,,1,0,1,3533,575,350,0,6.275e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,7,,,
+assemble,off,qwen/qwen3.7-flash,case_4_no_reason,2,,1,0,1,1847,491,116,0,2.981e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,1,,,
+assemble,off,qwen/qwen3.7-flash,case_5_worklog_only,2,,1,0,1,1546,486,77,0,2.459e-05,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,qwen/qwen3.7-flash,case_6_injection,2,,1,0,1,2418,506,155,0,3.533e-05,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+judge,off,qwen/qwen3.7-flash,judge_pass_1_full,2,,1,0,1,1020,460,15,0,1.575e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_pass_2_no_rejected,2,,1,0,1,2875,388,152,0,3.14e-05,,,,False,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_pass_3_pivot,2,,1,0,1,896,428,15,0,1.479e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_pass_4_multiple_rejected,2,,1,0,1,1037,431,15,0,1.488e-05,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,qwen/qwen3.7-flash,judge_fail_1_worklog,2,,1,0,1,3576,384,206,0,3.83e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_fail_2_vague,2,,1,0,1,3105,375,187,0,3.556e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_fail_3_no_reason,2,,1,0,1,1472,378,74,0,2.096e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,qwen/qwen3.7-flash,judge_fail_4_mixed,2,,1,0,1,4112,368,251,0,4.367e-05,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+assemble,off,z-ai/glm-5.3-flash,case_1_clear_decision,0,,1,0,1,90181,712,5179,4763,0.00134815,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,z-ai/glm-5.3-flash,case_2_pivot,0,,1,0,1,102999,718,6339,5870,0.0016386,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,6,,,
+assemble,off,z-ai/glm-5.3-flash,case_3_multiple_rejected,0,,1,0,1,60130,725,3728,3343,0.000986375,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,z-ai/glm-5.3-flash,case_4_no_reason,0,,1,0,1,90599,616,5030,4863,0.0013037,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+assemble,off,z-ai/glm-5.3-flash,case_5_worklog_only,0,,1,0,1,8448,606,466,384,0.00016195,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,z-ai/glm-5.3-flash,case_6_injection,0,,1,0,1,43924,631,2650,2438,0.000709825,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,3,,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_1_full,0,,1,0,1,10477,603,631,609,0.000202975,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_2_no_rejected,0,,1,0,1,21111,505,1183,1164,0.000333625,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_3_pivot,0,,1,0,1,22506,567,1295,1269,0.000366275,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_4_multiple_rejected,0,,1,0,1,18636,572,1005,988,0.00029415,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_1_worklog,0,,1,0,1,38717,509,2217,2028,0.000592425,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_2_vague,0,,1,0,1,37010,501,1910,1713,0.000515075,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_3_no_reason,0,,1,0,1,54878,500,3193,2975,0.00083575,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_4_mixed,0,,1,0,1,44899,493,2492,2274,0.000659975,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+support,off,z-ai/glm-5.3-flash,support_orig,1,,1,0,1,6992,701,476,444,0.000171575,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+support,off,z-ai/glm-5.3-flash,support_derived,1,,1,0,1,17761,2170,1603,1490,0.0005635,1.0,,,,False,,,,0,0,,,,,,,,,20,,,,,,0,,,,,,,,,
+assemble,off,z-ai/glm-5.3-flash,case_1_clear_decision,1,,1,0,1,56215,712,3679,3237,0.00097315,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,z-ai/glm-5.3-flash,case_2_pivot,1,timeout,1,1,0,120006,0,0,0,0.0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+assemble,off,z-ai/glm-5.3-flash,case_3_multiple_rejected,1,,1,0,1,76323,725,5020,4648,0.001309375,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,z-ai/glm-5.3-flash,case_4_no_reason,1,,1,0,1,84104,616,5092,4928,0.0013192,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+assemble,off,z-ai/glm-5.3-flash,case_5_worklog_only,1,,1,0,1,9109,606,466,384,0.00016195,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,z-ai/glm-5.3-flash,case_6_injection,1,,1,0,1,38227,631,2305,2107,0.000623575,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,3,,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_1_full,1,,1,0,1,15489,603,924,901,0.000276225,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_2_no_rejected,1,,1,0,1,32330,505,1700,1680,0.000462875,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_3_pivot,1,,1,0,1,28987,567,1651,1622,0.000455275,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_4_multiple_rejected,1,,1,0,1,30155,572,1670,1642,0.0004604,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_1_worklog,1,,1,0,1,29456,509,1666,1481,0.000454675,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_2_vague,1,,1,0,1,28044,501,1670,1496,0.000455075,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_3_no_reason,1,,1,0,1,39376,500,2163,2030,0.00057825,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_4_mixed,1,,1,0,1,30375,493,1722,1506,0.000467475,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+support,off,z-ai/glm-5.3-flash,support_orig,2,,1,0,1,6996,701,476,444,0.000171575,1.0,,,,False,,,,0,0,,,,,,,,,4,,,,,,0,,,,,,,,,
+support,off,z-ai/glm-5.3-flash,support_derived,2,,1,0,1,17258,2170,1555,1444,0.0005515,1.0,,,,False,,,,0,0,,,,,,,,,20,,,,,,0,,,,,,,,,
+assemble,off,z-ai/glm-5.3-flash,case_1_clear_decision,2,,1,0,1,68971,712,4603,4201,0.00120415,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,5,,,
+assemble,off,z-ai/glm-5.3-flash,case_2_pivot,2,,1,0,1,63528,718,3738,3314,0.00098835,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,6,,,
+assemble,off,z-ai/glm-5.3-flash,case_3_multiple_rejected,2,,1,0,1,57141,725,3707,3383,0.000981125,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,4,,,
+assemble,off,z-ai/glm-5.3-flash,case_4_no_reason,2,,1,0,1,76178,616,4374,4214,0.0011397,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,2,,,
+assemble,off,z-ai/glm-5.3-flash,case_5_worklog_only,2,,1,0,1,16690,606,840,765,0.00025545,,1.0,1.0,,,,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,,,,,,0,,,
+assemble,off,z-ai/glm-5.3-flash,case_6_injection,2,,1,0,1,43311,631,2717,2520,0.000726575,,1.0,1.0,,,1.0,,,,,,,,1.0,0,1.0,,1.0,,,,,,,,1.0,,,,,3,,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_1_full,2,,1,0,1,16878,603,1071,1038,0.000312975,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_2_no_rejected,2,,1,0,1,17750,505,1061,1043,0.000303125,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_3_pivot,2,,1,0,1,24609,567,1354,1328,0.000381025,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_pass_4_multiple_rejected,2,,1,0,1,19185,572,1164,1141,0.0003339,,,,True,,,pass,,,,,,,,,,,,,,,,,True,,,,,,,,pass,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_1_worklog,2,,1,0,1,46476,509,2749,2552,0.000725425,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_2_vague,2,,1,0,1,29140,501,1576,1413,0.000431575,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_3_no_reason,2,,1,0,1,60642,500,3111,2907,0.00081525,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+judge,off,z-ai/glm-5.3-flash,judge_fail_4_mixed,2,,1,0,1,31975,493,1912,1678,0.000514975,,,,True,,,fail,,,,,,,,,,,,,,,,,True,,,,,,,,fail,,
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,0,,6,0,6,17933,5024,1385,0,0.00033077,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,0,,6,0,6,19899,5190,1583,0,0.00036149,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,0,,6,0,6,23595,5294,1792,0,0.00039178,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_2_pivot,0,,4,0,4,15728,4329,1492,0,0.00032383,,0.9583333333333334,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,2,,0.6,1.0,0,False,,,3,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_2_pivot,0,,4,0,4,16650,4496,1617,0,0.00034509,,0.9583333333333334,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,2,,0.5,1.0,0,False,,,3,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_2_pivot,0,,4,0,4,17647,4490,1691,0,0.00035453,,0.9583333333333334,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,1,,0.5,1.0,0,False,,,3,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,0,,6,0,6,18970,4840,1581,0,0.00035073,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,False,,,4,0,,,,1,,0.75,1.0,0,True,,,3,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,0,,6,0,6,18008,4919,1535,0,0.00034711999999999997,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,True,,,4,0,,,,1,,0.75,1.0,0,True,,,3,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,0,,6,0,6,19918,5120,1667,0,0.00037031,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,True,,,4,0,,,,1,,0.75,1.0,0,True,,,3,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,0,,6,0,6,16654,4740,1361,0,0.00031913,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,0,,6,0,6,18992,4844,1552,0,0.00034708,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,0,,6,0,6,18327,4797,1441,0,0.00033124,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,0,,6,0,6,18939,4973,1396,0,0.00033067,,1.0,,,,,,0.0,,,,0,3,,,,True,,,3,0,,,,1,,0.0,1.0,0,True,,,0,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,0,,6,0,6,20130,4849,1501,0,0.0003406,,0.96,,,,,,0.0,,,,0,3,,,,False,,,3,1,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,0,,6,0,6,22049,4961,1641,0,0.00036216,,1.0,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_6_injection,0,,6,0,6,22741,5518,2235,0,0.00045609000000000003,,1.0,,,,,,0.2857142857142857,,,,0,5,,,,True,,,6,0,,,,1,,0.16666666666666666,1.0,0,True,,,1,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_6_injection,0,,6,0,6,24362,5409,2203,0,0.00044866,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,1,,0.25,1.0,0,True,,,1,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_6_injection,0,,6,0,6,23703,5583,2319,0,0.00046896,,1.0,,,,,,0.2857142857142857,,,,0,5,,,,True,,,6,0,,,,1,,0.16666666666666666,1.0,0,True,,,1,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,1,,6,0,6,15699,5019,1187,0,0.00030488,,1.0,,,,,,1.0,,,,0,0,,,,True,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,1,,6,0,6,23012,5187,1709,0,0.00037778,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,1,,1.0,1.0,0,True,,,2,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,1,,6,0,6,19749,5094,1491,0,0.00034665,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_2_pivot,1,,6,0,6,22151,5772,1998,0,0.0004329,,0.9249999999999999,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,1,,0.6,1.0,0,True,,,3,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_2_pivot,1,,4,0,4,16923,4692,1583,0,0.00034655,,0.9583333333333334,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,0,,0.6,1.0,0,False,,,3,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,1,,4,0,4,11511,3784,1047,0,0.00024963,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,True,,,4,0,,,,1,,0.75,1.0,0,False,,,3,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_2_pivot,1,,6,0,6,23319,5773,2078,0,0.00044332999999999997,,0.9583333333333334,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,0,,0.5,1.0,0,True,,,3,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,1,,6,0,6,15581,4769,1360,0,0.00031987,,1.0,,,,,,0.4,,,,0,3,,,,True,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,1,,6,0,6,16261,4849,1471,0,0.0003367,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,True,,,4,0,,,,1,,0.75,1.0,0,True,,,3,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,1,,6,0,6,19368,4918,1644,0,0.00036126,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,False,,,4,0,,,,0,,0.75,1.0,0,True,,,3,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,1,,4,0,4,11289,3874,1049,0,0.00025259,,1.0,,,,,,0.4,,,,0,3,,,,True,,,4,0,,,,1,,0.25,1.0,0,False,,,1,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,1,,4,0,4,12488,3965,1164,0,0.00027027,,1.0,,,,,,0.4,,,,0,3,,,,True,,,4,0,,,,1,,0.25,1.0,0,False,,,1,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,1,,6,0,6,20113,4934,1477,0,0.00034003,,1.0,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,1,,6,0,6,19434,4925,1501,0,0.00034288,,0.8333333333333334,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,1,,0.0,1.0,0,True,,,0,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,1,,6,0,6,18217,4859,1376,0,0.00032465,,1.0,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_6_injection,1,,6,0,6,27611,5836,2637,0,0.00051789,,1.0,,,,,,0.2857142857142857,,,,0,5,,,,False,,,6,0,,,,2,,0.16666666666666666,1.0,0,True,,,1,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_6_injection,1,,6,0,6,24996,5284,2166,0,0.00044009999999999996,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,2,,0.25,1.0,0,True,,,1,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_6_injection,1,,6,0,6,28071,5317,2287,0,0.00045682,,0.9444444444444445,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,2,,0.25,1.0,0,True,,,1,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,2,,6,0,6,18423,5026,1431,0,0.00033681,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,2,,6,0,5,23876,5129,1857,0,0.00039528,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_1_clear_decision,2,,6,0,6,19671,5021,1525,0,0.00034888,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,3,,,,0,,1.0,1.0,0,True,,,2,1
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_2_pivot,2,,6,0,6,29889,6126,2566,0,0.00051736,,0.8972222222222223,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,2,,,,1,,0.5,1.0,0,True,,,3,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_2_pivot,2,,4,0,4,15094,4255,1350,0,0.00030314999999999997,,0.9583333333333334,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,1,,0.6,1.0,0,False,,,3,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_2_pivot,2,,6,0,6,22485,5682,1939,0,0.00042253,,0.9249999999999999,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,1,,0.6,1.0,0,True,,,3,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,2,,4,0,4,11990,3835,1173,0,0.00026754000000000003,,1.0,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,1,,0.6,1.0,0,False,,,3,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,2,,6,0,6,16972,4910,1440,0,0.0003345,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,True,,,4,0,,,,0,,0.75,1.0,0,True,,,3,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_3_multiple_rejected,2,,4,0,4,13987,4018,1343,0,0.00029513,,1.0,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,1,,0.6,1.0,0,False,,,3,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,2,,6,0,6,18377,4936,1560,0,0.00035088000000000003,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,2,,4,0,4,12414,3944,1106,0,0.00026210000000000003,,1.0,,,,,,0.4,,,,0,3,,,,True,,,4,0,,,,1,,0.25,1.0,0,False,,,1,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_4_no_reason,2,,6,0,6,18705,4895,1520,0,0.00034445,,1.0,,,,,,0.4,,,,0,3,,,,True,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,2,,6,0,6,18728,4850,1366,0,0.00032308,,0.8333333333333334,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,2,,6,0,6,21097,4908,1466,0,0.00033782,,1.0,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,1,,0.0,1.0,0,True,,,0,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_5_worklog_only,2,,6,0,6,23366,4982,1747,0,0.00037657,,1.0,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,C (qwen3.7-flash / qwen3.7-flash),case_6_injection,2,,6,0,6,24183,5613,2210,0,0.00045568999999999997,,1.0,,,,,,0.33333333333333337,,,,0,4,,,,True,,,5,0,,,,1,,0.2,1.0,0,True,,,1,0
+config,off,A (qwen3.7-flash / qwen3.7-flash),case_6_injection,2,,6,0,6,27052,5859,2590,0,0.00051247,,1.0,,,,,,0.2857142857142857,,,,0,5,,,,False,,,6,0,,,,1,,0.16666666666666666,1.0,0,True,,,1,0
+config,off,B (qwen3.7-flash / qwen3.7-flash),case_6_injection,2,,6,0,6,27147,5616,2441,0,0.00048581000000000004,,1.0,,,,,,0.33333333333333337,,,,0,4,,,,False,,,5,0,,,,1,,0.2,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,0,,4,0,4,18203,4313,843,0,0.0019163499999999998,,1.0,,,,,,0.8,,,,0,1,,,,True,,,3,0,,,,1,,0.6666666666666666,1.0,0,False,,,2,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,0,,6,0,6,18631,4941,1204,0,0.0010645,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,0,,6,0,6,20682,5169,1563,0,0.00035826,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,1,,1.0,1.0,0,True,,,2,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,0,,4,0,4,12281,4081,1134,0,0.0014671,,0.9166666666666666,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,0,,0.6,1.0,0,False,,,3,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,0,,6,0,6,28072,6122,2143,0,0.00390315,,1.0,,,,,,0.7499999999999999,,,,0,2,,,,False,,,5,0,,,,0,,0.6,1.0,0,True,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,0,,6,0,6,27287,5791,2301,0,0.00047286,,1.0,,,,,,0.7499999999999999,,,,0,2,,,,False,,,5,0,,,,2,,0.6,1.0,0,True,,,3,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,0,,6,0,6,17480,5166,1642,0,0.00152943,,0.8888888888888888,,,,,,0.7499999999999999,,,,0,2,,,,False,,,5,0,,,,0,,0.6,1.0,0,True,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,0,,4,0,4,11178,3675,1023,0,0.00024323999999999998,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,True,,,4,0,,,,1,,0.75,1.0,0,False,,,3,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,0,,6,0,6,20715,5013,1508,0,0.00134819,,1.0,,,,,,0.4,,,,0,3,,,,True,,,4,0,,,,1,,0.25,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,0,,6,0,6,26513,6228,2524,0,0.0044006,,1.0,,,,,,0.6666666666666666,,,,0,3,,,,False,,,6,0,,,,0,,0.5,1.0,0,True,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,0,,6,0,6,16137,4759,1345,0,0.00031762,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,0,,5,0,5,8573,3982,261,0,0.00056896,,1.0,,,,,,1.0,,,,0,0,,,,False,,,0,0,,,,0,,1.0,1.0,0,True,,,0,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,0,,6,0,6,21649,4839,1530,0,0.00034407000000000003,,0.8333333333333334,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,0,,6,0,6,25074,5998,2157,0,0.00389585,,1.0,,,,,,0.33333333333333337,,,,0,4,,,,False,,,5,0,,,,0,,0.2,1.0,0,True,,,1,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_6_injection,0,,6,0,6,34751,5959,2867,0,0.00240909,,1.0,,,,,,0.18181818181818182,,,,0,9,,,,False,,,10,0,,,,4,,0.1,1.0,0,True,,,1,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_6_injection,0,,6,0,6,23507,5312,1942,0,0.00041182,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,2,,0.25,1.0,0,True,,,1,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,1,,4,0,4,17290,3915,778,0,0.0011228199999999999,,1.0,,,,,,0.8,,,,0,1,,,,True,,,3,0,,,,0,,0.6666666666666666,1.0,0,False,,,2,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,0,,6,0,6,40236,6062,2535,0,0.00438115,,1.0,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,1,,6,0,6,18146,5149,1371,0,0.0003327,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,1,,1.0,1.0,0,True,,,2,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,1,,4,0,4,15399,4383,1531,0,0.00174281,,0.9166666666666666,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,0,,0.5,1.0,0,False,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,1,,4,0,4,16992,4362,1614,0,0.00034068,,0.9583333333333334,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,1,,0.5,1.0,0,False,,,3,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,1,,4,0,4,10560,3862,1125,0,0.00138278,,1.0,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,1,,0.6,1.0,0,False,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,1,,4,0,4,12385,3880,1201,0,0.00027253,,1.0,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,0,,0.6,1.0,0,False,,,3,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_6_injection,0,,6,0,6,32450,6617,3072,0,0.0051634,,1.0,,,,,,0.2222222222222222,,,,0,7,,,,False,,,8,0,,,,1,,0.125,1.0,0,True,,,1,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,1,,6,0,6,18513,4843,1333,0,0.0012979399999999998,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,1,,5,0,5,7374,3975,262,0,0.00056888,,1.0,,,,,,1.0,,,,0,0,,,,False,,,0,0,,,,0,,1.0,1.0,0,True,,,0,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,1,,6,0,6,24797,5290,1998,0,0.00041844,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,1,,0.25,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,1,,6,0,6,28736,6459,2415,0,0.00431055,,1.0,,,,,,0.5,,,,0,4,,,,False,,,6,0,,,,2,,0.3333333333333333,1.0,0,True,,,2,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,1,,6,0,6,19977,4845,1438,0,0.00033229,,1.0,,,,,,0.0,,,,0,3,,,,False,,,3,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,1,,4,0,4,15986,4913,1597,0,0.00297885,,1.0,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,0,,0.5,1.0,0,False,,,3,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_6_injection,1,,6,0,6,36853,6182,3015,0,0.00255934,,0.9848484848484849,,,,,,0.16666666666666669,,,,0,10,,,,False,,,11,0,,,,1,,0.09090909090909091,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,1,,6,0,6,19881,6307,2349,0,0.00419765,,1.0,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,0,,0.5,1.0,0,True,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_6_injection,1,,6,0,6,24238,5450,2238,0,0.00045444,,1.0,,,,,,0.33333333333333337,,,,0,4,,,,True,,,5,0,,,,0,,0.2,1.0,0,True,,,1,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,2,,6,0,6,20279,5329,1648,0,0.00153706,,1.0,,,,,,0.5714285714285715,,,,0,3,,,,False,,,5,0,,,,0,,0.4,1.0,0,True,,,2,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,1,,6,0,6,20647,5777,1935,0,0.00357415,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,2,,6,0,6,21755,5238,1579,0,0.00036241,,1.0,,,,,,1.0,,,,0,0,,,,False,,,2,0,,,,0,,1.0,1.0,0,True,,,2,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,1,,5,0,5,8704,4365,349,0,0.00130925,,1.0,,,,,,1.0,,,,0,0,,,,False,,,0,0,,,,0,,1.0,1.0,0,True,,,0,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,2,,6,0,6,28607,6136,2401,0,0.00188834,,1.0,,,,,,0.6666666666666666,,,,0,3,,,,True,,,6,0,,,,0,,0.5,1.0,0,True,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,2,,4,0,4,14988,4214,1298,0,0.00029516,,0.9249999999999999,,,,,,0.7499999999999999,,,,0,2,,,,True,,,5,0,,,,2,,0.6,1.0,0,False,,,3,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,2,,4,0,4,11763,3773,1022,0,0.00024605,,1.0,,,,,,0.8571428571428571,,,,0,1,,,,True,,,4,0,,,,0,,0.75,1.0,0,False,,,3,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,2,,6,0,6,21817,5523,2181,0,0.0019058900000000001,,1.0,,,,,,0.6,,,,0,4,,,,True,,,7,0,,,,1,,0.42857142857142855,1.0,0,True,,,3,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_6_injection,1,,6,0,6,35084,7416,3891,0,0.00634695,,0.9907407407407408,,,,,,0.18181818181818182,,,,0,9,,,,False,,,10,1,,,,2,,0.1,1.0,0,True,,,1,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,2,,6,0,6,16699,4761,1412,0,0.00032639,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,2,,6,0,6,18920,5014,1379,0,0.00132697,,1.0,,,,,,0.4,,,,0,3,,,,True,,,4,0,,,,1,,0.25,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_1_clear_decision,2,,4,0,4,10263,4153,692,0,0.0016956,,1.0,,,,,,1.0,,,,0,0,,,,True,,,2,0,,,,0,,1.0,1.0,0,False,,,2,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,2,,6,0,6,28253,5469,2379,0,0.00047334,,1.0,,,,,,0.0,,,,0,7,,,,False,,,7,0,,,,2,,0.0,1.0,0,True,,,0,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_2_pivot,2,,6,0,6,27767,6972,2756,0,0.0048394,,1.0,,,,,,0.6666666666666666,,,,0,3,,,,False,,,6,0,,,,2,,0.5,1.0,0,True,,,3,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,2,,6,0,6,30279,6173,2709,0,0.0023282900000000002,,1.0,,,,,,0.0,,,,0,10,,,,False,,,10,0,,,,0,,0.0,1.0,0,True,,,0,0
+config,off,C (gpt-5.4-nano / qwen3.7-flash),case_6_injection,2,,6,0,6,27196,5799,2521,0,0.0005017,,0.9583333333333334,,,,,,0.2857142857142857,,,,0,5,,,,False,,,6,0,,,,2,,0.16666666666666666,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_3_multiple_rejected,2,,6,0,6,24120,6814,3049,0,0.00517405,,1.0,,,,,,0.6,,,,0,4,,,,False,,,7,0,,,,0,,0.42857142857142855,1.0,0,True,,,3,0
+config,off,B (gpt-5.4-nano / qwen3.7-flash),case_6_injection,2,,6,0,6,35167,5919,3053,0,0.00241303,,1.0,,,,,,0.18181818181818182,,,,0,9,,,,False,,,10,0,,,,1,,0.1,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_4_no_reason,2,,6,0,6,21207,5748,1924,0,0.0035546,,1.0,,,,,,0.4,,,,0,3,,,,False,,,4,0,,,,0,,0.25,1.0,0,True,,,1,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_5_worklog_only,2,,5,0,5,8880,4346,399,0,0.00136795,,1.0,,,,,,1.0,,,,0,0,,,,False,,,0,0,,,,0,,1.0,1.0,0,True,,,0,0
+config,off,A (gpt-5.4-nano / qwen3.7-flash),case_6_injection,2,,6,0,6,43445,6838,3155,0,0.00531135,,1.0,,,,,,0.18181818181818182,,,,0,9,,,,False,,,10,0,,,,0,,0.1,1.0,0,True,,,1,0

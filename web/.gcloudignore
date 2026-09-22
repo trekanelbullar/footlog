@@ -1,0 +1,7 @@
+# Cloud Build に送らないもの（秘密と、ビルドに要らないもの）
+.gcloudignore
+.env
+.env.*
+!.env.example
+node_modules/
+.next/

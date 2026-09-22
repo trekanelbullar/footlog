@@ -3,6 +3,18 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Project-local secrets and generated artifacts
+.env
+.env.*
+!.env.example
+.venv/
+log/
+logs/
+output/
+outputs/
+test_out/
+data/
+
 # C extensions
 *.so
 
@@ -15,6 +27,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# ↑ Python のテンプレートの lib/ が web/lib/（Next.js の共有コード）まで無視しないように
+!web/lib/
 lib64/
 parts/
 sdist/
@@ -148,7 +162,6 @@ activemq-data/
 *.sage.py
 
 # Environments
-.env
 .envrc
 .venv
 env/
@@ -216,3 +229,25 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- Project additions ----
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# Credentials
+*credentials*.json
+*service-account*.json
+
+# Claude Code (local only)
+.claude/settings.local.json
+
+# Design chat logs
+design/**/context-chat.md

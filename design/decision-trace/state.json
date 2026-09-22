@@ -1,0 +1,34 @@
+{
+  "currentNode": "実装",
+  "status": "in_progress",
+  "designVersion": "v3",
+  "approvedDesignVersion": "v3",
+  "approvedDesignSha256": "abce42014906adda59110e04e6c6a8aef404bf596b0d67f73651435137623df5",
+  "approvedAt": "2026-09-21",
+  "approvalEvidence": "v3:abce42014906 承認。codex の指摘15件の直し方、追加5点の入れ方、spec.md の解釈の変更（進捗判定から status を外す）と追加分、すべて了承。",
+  "requiredApprovalFingerprint": "v3:abce42014906",
+  "baseline": "feature/impl-core@0819a08",
+  "criticRound": 2,
+  "criticRoundLimit": 1,
+  "openIssueIds": [],
+  "requiredReads": [
+    "design.md",
+    "addenda.md",
+    "ledger.md"
+  ],
+  "nextAction": "§9 の1段目（土台と契約）",
+  "lastUpdated": "2026-09-21",
+  "criticVendors": "round1: claude/claude-opus-5 / round2: codex/gpt-5.6-sol xhigh（A・B・C の3分割、各15分制限、全完走）",
+  "decisions": {
+    "P-1": "追わない（既知の制限として README に明記）",
+    "specDeviations": "設計書の通りで了承",
+    "dependencies": "§13 の通りで了承（psycopg のまま）",
+    "U5-U12": "既定値で確定（addenda.md AD-1）",
+    "addenda": "承認後の追加指示は addenda.md（AD-1〜AD-3）。design.md は承認時のまま"
+  },
+  "delegation": {
+    "実装(worker)": "claude/sonnet サブエージェント",
+    "実装(web)": "claude/sonnet サブエージェント",
+    "批評": "claude/opus + codex/gpt-5.6-sol"
+  }
+}

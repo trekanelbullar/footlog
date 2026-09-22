@@ -1,0 +1,15 @@
+# tests/invariants/test_i6_repo_scan.py が許すテスト用の偽の鍵・値。
+# 実際のサービスに使える鍵ではない（テストのために作った文字列だけをここに書く）。
+
+# .env.example のプレースホルダー
+replace_with_your_api_key
+# README.md の設定例のプレースホルダー
+sk-orca-your-key
+# web のコードで、変数や環境変数の名前を参照しているだけの箇所（値ではない）
+session.access_token
+process.env.WORKER_SHARED_SECRET
+# scripts/set_env.py とそのテストで、関数の名前を渡しているだけの箇所（値ではない）
+getpass.getpass
+script.ask_secret
+# web のサーバー側で、実行時の環境変数の名前を参照している箇所（値ではない）
+process.env.SUPABASE_PUBLISHABLE_KEY
